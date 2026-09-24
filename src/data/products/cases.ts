@@ -1,0 +1,151 @@
+import { defineProduct, group, variantMatrix, type Color } from "@/data/builders";
+import type { Product } from "@/types";
+
+/** NAMUNAVIY narxlar va qoldiqlar — haqiqiy ro‘yxat kelganda almashtiriladi. */
+
+const BLACK: Color = { name: "Black", hex: "#1E1E20" };
+const CLEAR: Color = { name: "Shaffof", hex: "#E9ECEF" };
+
+export const caseProducts: Product[] = [
+  defineProduct({
+    slug: "iphone-15-pro-max-silikon-chexol",
+    name: "iPhone 15 Pro Max silikon chexol",
+    brandId: "apple",
+    categoryId: "aksessuarlar-chexollar",
+    shortDescription: "Yumshoq silikon, ichki mikrofiber qoplama.",
+    description:
+      "Apple silikon chexoli iPhone 15 Pro Max uchun: qo‘lga yoqimli yumshoq qoplama, ichida mikrofiber va MagSafe qo‘llovi.",
+    variants: variantMatrix({
+      slug: "iphone-15-pro-max-silikon-chexol",
+      sku: "CIP15PMS",
+      colors: [BLACK, { name: "Storm Blue", hex: "#4A6076" }, { name: "Pink", hex: "#E8B9BC" }],
+      options: [{ price: 450_000 }],
+      warrantyMonths: 3,
+      stock: [8, 5, 0],
+    }),
+    specs: [group("Xususiyatlar", [["Material", "Silikon"], ["Mos", "iPhone 15 Pro Max"], ["MagSafe", "Bor"]])],
+    attributes: { compatibility: ["iPhone 15 Pro Max"], material: ["Silikon", "MagSafe"] },
+    keywords: ["chexol", "chehol", "case", "silikon"],
+    popularity: 92,
+    rating: [4.7, 198],
+    createdAt: "2026-06-11T09:00:00.000Z",
+  }),
+  defineProduct({
+    slug: "iphone-15-pro-max-magsafe-chexol",
+    name: "iPhone 15 Pro Max MagSafe chexol",
+    brandId: "spigen",
+    categoryId: "aksessuarlar-chexollar",
+    shortDescription: "Shaffof, magnitli, sarg‘aymaydigan chexol.",
+    description:
+      "Spigen Ultra Hybrid MagSafe — iPhone 15 Pro Max uchun shaffof va magnitli chexol. Telefon rangi ko‘rinib turadi, MagSafe zaryadchik bilan ishlaydi.",
+    variants: variantMatrix({
+      slug: "iphone-15-pro-max-magsafe-chexol",
+      sku: "CIP15PMM",
+      colors: [CLEAR, { name: "Black", hex: "#1E1E20" }],
+      options: [{ price: 380_000, oldPrice: 420_000 }],
+      warrantyMonths: 3,
+      stock: [6, 3],
+    }),
+    specs: [group("Xususiyatlar", [["Material", "TPU + polikarbonat"], ["Mos", "iPhone 15 Pro Max"], ["MagSafe", "Bor"]])],
+    attributes: { compatibility: ["iPhone 15 Pro Max"], material: ["Shaffof", "MagSafe"] },
+    keywords: ["chexol", "chehol", "case", "magsafe", "shaffof"],
+    popularity: 80,
+    rating: [4.6, 142],
+    createdAt: "2026-06-11T09:00:00.000Z",
+  }),
+  defineProduct({
+    slug: "iphone-15-pro-teri-chexol",
+    name: "iPhone 15 Pro teri chexol",
+    brandId: "apple",
+    categoryId: "aksessuarlar-chexollar",
+    shortDescription: "Tabiiy teri, vaqt o‘tishi bilan chiroyli tus oladi.",
+    description:
+      "iPhone 15 Pro uchun teri chexol: premium ko‘rinish, yumshoq teginish va MagSafe qo‘llovi.",
+    variants: variantMatrix({
+      slug: "iphone-15-pro-teri-chexol",
+      sku: "CIP15PT",
+      colors: [
+        { name: "Dark Cherry", hex: "#5E2A32" },
+        { name: "Midnight", hex: "#232A31" },
+      ],
+      options: [{ price: 700_000 }],
+      warrantyMonths: 3,
+      stock: [2, 1],
+    }),
+    specs: [group("Xususiyatlar", [["Material", "Teri"], ["Mos", "iPhone 15 Pro"], ["MagSafe", "Bor"]])],
+    attributes: { compatibility: ["iPhone 15 Pro"], material: ["Teri", "MagSafe"] },
+    keywords: ["chexol", "chehol", "case", "teri", "leather"],
+    popularity: 44,
+    rating: [4.6, 31],
+    createdAt: "2026-05-30T09:00:00.000Z",
+  }),
+  defineProduct({
+    slug: "samsung-s24-ultra-himoya-chexol",
+    name: "Samsung S24 Ultra himoya chexoli",
+    brandId: "spigen",
+    categoryId: "aksessuarlar-chexollar",
+    shortDescription: "Zarbadan mustahkam himoya, ikki qatlamli.",
+    description:
+      "Spigen Tough Armor — Galaxy S24 Ultra uchun ikki qatlamli mustahkam himoya chexoli. Tushib ketishdan va zarbadan asraydi, orqasida tayanch stend bor.",
+    variants: variantMatrix({
+      slug: "samsung-s24-ultra-himoya-chexol",
+      sku: "CS24UH",
+      colors: [BLACK, { name: "Gunmetal", hex: "#4A4D52" }],
+      options: [{ price: 420_000 }],
+      warrantyMonths: 3,
+      stock: [5, 2],
+    }),
+    specs: [group("Xususiyatlar", [["Material", "TPU + polikarbonat"], ["Mos", "Galaxy S24 Ultra"], ["Himoya", "Harbiy sinf (MIL-STD)"]])],
+    attributes: { compatibility: ["Galaxy S24 Ultra"], material: ["Mustahkam himoyali"] },
+    keywords: ["chexol", "chehol", "case", "himoya", "s24 ultra"],
+    popularity: 70,
+    rating: [4.6, 88],
+    createdAt: "2026-04-15T09:00:00.000Z",
+  }),
+  defineProduct({
+    slug: "redmi-note-13-silikon-chexol",
+    name: "Redmi Note 13 silikon chexoli",
+    brandId: "baseus",
+    categoryId: "aksessuarlar-chexollar",
+    shortDescription: "Yupqa silikon chexol, kamera atrofi himoyalangan.",
+    description:
+      "Redmi Note 13 uchun yupqa silikon chexol: aniq tugma joylari, kamera atrofida ko‘tarilgan chekka va sirpanmaydigan sirt.",
+    variants: variantMatrix({
+      slug: "redmi-note-13-silikon-chexol",
+      sku: "CRN13S",
+      colors: [BLACK, CLEAR, { name: "Blue", hex: "#3B6EA8" }],
+      options: [{ price: 60_000 }],
+      warrantyMonths: 1,
+      stock: [20, 14, 9],
+    }),
+    specs: [group("Xususiyatlar", [["Material", "Silikon"], ["Mos", "Redmi Note 13"]])],
+    attributes: { compatibility: ["Redmi Note 13"], material: ["Silikon"] },
+    keywords: ["chexol", "chehol", "case", "silikon", "redmi"],
+    popularity: 85,
+    rating: [4.3, 210],
+    createdAt: "2026-03-08T09:00:00.000Z",
+  }),
+  defineProduct({
+    slug: "iphone-15-shaffof-chexol",
+    name: "iPhone 15 shaffof chexol",
+    brandId: "spigen",
+    categoryId: "aksessuarlar-chexollar",
+    shortDescription: "Kristal shaffof, sarg‘aymaydigan himoya.",
+    description:
+      "Spigen Crystal Flex — iPhone 15 uchun yupqa, shaffof va yumshoq chexol. Telefonning asl rangini ko‘rsatadi.",
+    variants: variantMatrix({
+      slug: "iphone-15-shaffof-chexol",
+      sku: "CIP15C",
+      colors: [CLEAR],
+      options: [{ price: 180_000 }],
+      warrantyMonths: 3,
+      stock: 0,
+    }),
+    specs: [group("Xususiyatlar", [["Material", "TPU"], ["Mos", "iPhone 15"]])],
+    attributes: { compatibility: ["iPhone 15"], material: ["Shaffof"] },
+    keywords: ["chexol", "chehol", "case", "shaffof", "clear"],
+    popularity: 61,
+    rating: [4.5, 73],
+    createdAt: "2026-02-20T09:00:00.000Z",
+  }),
+];

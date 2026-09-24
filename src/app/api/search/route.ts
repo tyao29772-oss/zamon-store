@@ -1,0 +1,45 @@
+import { NextResponse } from "next/server";
+import { getPriceInfo, getProductStockStatus } from "@/lib/product";
+import { getBrands } from "@/lib/repo/brands";
+import { getCategories } from "@/lib/repo/categories";
+import { searchProducts } from "@/lib/repo/search";
+import { productHref } from "@/lib/urls";
+
+export interface SearchSuggestion {
+  slug: string;
+  name: string;
+  brandName: string | null;
+  categoryName: string | null;
+  price: number;
+  hasDiscount: boolean;
+  stockStatus: ReturnType<typeof getProductStockStatus>;
+  href: string;
+}
+
+/** Header'dagi tezkor takliflar uchun yengil (rasmsiz) natijalar. To‘liq natija: `/qidiruv`. */
+export async function GET(request: Request): Promise<NextResponse> {
+  const query = new URL(request.url).searchParams.get("q") ?? "";
+  const [hits, brands, categories] = await Promise.all([
+    searchProducts(query, 6),
+    getBrands(),
+    getCategories(),
+  ]);
+  const brandById = new Map(brands.map((b) => [b.id, b]));
+  const categoryById = new Map(categories.map((c) => [c.id, c]));
+
+  const suggestions: SearchSuggestion[] = hits.map(({ product }) => {
+    const price = getPriceInfo(product);
+    return {
+      slug: product.slug,
+      name: product.name,
+      brandName: brandById.get(product.brandId)?.name ?? null,
+      categoryName: categoryById.get(product.categoryId)?.name ?? null,
+      price: price.price,
+      hasDiscount: price.hasDiscount,
+      stockStatus: getProductStockStatus(product),
+      href: productHref(product.slug),
+    };
+  });
+
+  return NextResponse.json({ query, results: suggestions });
+}
