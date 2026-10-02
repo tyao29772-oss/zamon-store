@@ -30,6 +30,10 @@ export interface CreateOrderInput {
   note?: string;
 }
 
+export async function countOrders(): Promise<number> {
+  return countJsonLines(FILE_NAME);
+}
+
 export async function createOrder(input: CreateOrderInput): Promise<Order> {
   const order: Order = {
     id: await nextOrderId(),

@@ -9,7 +9,10 @@ const BASE_URL = (process.env.BASE_URL ?? "http://localhost:3000").replace(/\/+$
 /** @type {{ path: string; status?: number; includes?: string[] }[]} */
 const routes = [
   { path: "/", includes: ["Zamon Store", "Mashhur mahsulotlar", "Pastki menyu", "Asosiy mazmunga o‘tish"] },
-  { path: "/bu-sahifa-yoq-12345", status: 404, includes: ["Sahifa topilmadi"] },
+  { path: "/bu-sahifa-yoq-12345", status: 404, includes: ["Sahifa topilmadi", "Asosiy mazmunga o‘tish"] },
+  // Admin: sessiyasiz panel login sahifasiga yo‘naltiriladi, login sahifasida do‘kon ramkasi yo‘q.
+  { path: "/admin", status: 307 },
+  { path: "/admin/login", includes: ["Admin panel"] },
 ];
 
 let failed = 0;

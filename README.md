@@ -37,6 +37,8 @@ Brauzerda [http://localhost:3000](http://localhost:3000) ni oching.
 | `NEXT_PUBLIC_TELEGRAM_USERNAME` | Yo‘q (standart: demo username) | Buyurtma tugmasi/deep-link shu username'ga ochiladi. `@` belgisisiz. |
 | `TELEGRAM_BOT_TOKEN` | Yo‘q | To‘ldirilsa, yangi buyurtmada bot orqali adminga avtomatik xabar boradi. [@BotFather](https://t.me/BotFather) orqali olinadi. |
 | `TELEGRAM_ADMIN_CHAT_ID` | Yo‘q | Admin xabari yuboriladigan chat ID. Ikkalasi (token + chat ID) to‘ldirilmasa, bot xabari jimgina o‘tkazib yuboriladi — sayt va buyurtmani saqlash baribir ishlayveradi. |
+| `ADMIN_PASSWORD` | Admin panel uchun | `/admin` ga kirish paroli, kamida 12 belgi. Kuchli parol tanlang. |
+| `ADMIN_SESSION_SECRET` | Admin panel uchun | Sessiya cookie'sini imzolash kaliti, kamida 32 belgi: `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`. Ikkalasi to‘ldirilmaguncha `/admin` ga kirib bo‘lmaydi. Parol yoki kalit almashtirilsa, barcha admin sessiyalari bekor bo‘ladi. |
 
 Hech biri sirli qilib `NEXT_PUBLIC_` bilan boshlanmaydi — token/chat ID faqat serverda o‘qiladi.
 

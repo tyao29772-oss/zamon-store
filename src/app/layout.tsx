@@ -1,13 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
-import { CatalogPanel } from "@/components/layout/CatalogPanel";
-import { Footer } from "@/components/layout/Footer";
-import { Header } from "@/components/layout/Header";
-import { MobileNav } from "@/components/layout/MobileNav";
-import { SearchOverlay } from "@/components/search/SearchOverlay";
 import { publicEnv } from "@/config/env";
 import { siteConfig } from "@/config/site";
-import { getCategoryTree } from "@/lib/repo/categories";
 import { Providers } from "@/providers/Providers";
 import "./globals.css";
 
@@ -48,26 +42,15 @@ export const viewport: Viewport = {
   themeColor: "#f3ece3",
 };
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const tree = await getCategoryTree();
-
+/**
+ * Ildiz layout faqat `<html>`, shriftlar va provayderlarni beradi. Do‘kon ramkasi
+ * (header/footer) `(store)/layout.tsx` da, admin panelniki — `admin/` ichida.
+ */
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang={siteConfig.language} className={`${inter.variable} ${cormorant.variable}`}>
       <body className="min-h-dvh">
-        <a
-          href="#main"
-          className="fixed left-4 top-4 z-[100] -translate-y-24 rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white transition-transform focus:translate-y-0"
-        >
-          Asosiy mazmunga o‘tish
-        </a>
-        <Providers>
-          <Header />
-          {children}
-          <Footer />
-          <MobileNav />
-          <CatalogPanel tree={tree} />
-          <SearchOverlay />
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

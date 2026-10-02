@@ -45,9 +45,16 @@ export function checkRateLimit(key: string, max: number, windowMs: number): Rate
   return { allowed: true };
 }
 
-/** So‘rovdan mijoz IP manzilini oladi (proksi orqasida `x-forwarded-for` birinchisi). */
-export function getClientIp(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
+/**
+ * So‘rovdan mijoz IP manzilini oladi. Avval Netlify o‘zi qo‘yadigan (mijoz soxtalashtira
+ * olmaydigan) sarlavha, bo‘lmasa proksi orqasidagi `x-forwarded-for` birinchisi.
+ */
+export function getClientIp(source: Request | Pick<Headers, "get">): string {
+  // `instanceof` — Next'ning `headers()` obyekti ichida ham `headers` maydoni bor, `in` bilan ajratib bo‘lmaydi.
+  const headers = source instanceof Request ? source.headers : source;
+  const netlifyIp = headers.get("x-nf-client-connection-ip");
+  if (netlifyIp) return netlifyIp.trim();
+  const forwarded = headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0]!.trim();
-  return request.headers.get("x-real-ip") ?? "unknown";
+  return headers.get("x-real-ip") ?? "unknown";
 }
