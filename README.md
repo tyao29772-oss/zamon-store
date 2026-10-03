@@ -39,6 +39,17 @@ Brauzerda [http://localhost:3000](http://localhost:3000) ni oching.
 | `TELEGRAM_ADMIN_CHAT_ID` | Yo‘q | Admin xabari yuboriladigan chat ID. Ikkalasi (token + chat ID) to‘ldirilmasa, bot xabari jimgina o‘tkazib yuboriladi — sayt va buyurtmani saqlash baribir ishlayveradi. |
 | `ADMIN_PASSWORD` | Admin panel uchun | `/admin` ga kirish paroli, kamida 12 belgi. Kuchli parol tanlang. |
 | `ADMIN_SESSION_SECRET` | Admin panel uchun | Sessiya cookie'sini imzolash kaliti, kamida 32 belgi: `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`. Ikkalasi to‘ldirilmaguncha `/admin` ga kirib bo‘lmaydi. Parol yoki kalit almashtirilsa, barcha admin sessiyalari bekor bo‘ladi. |
+| `SUPABASE_URL` | Productionda ha | Supabase loyihasi manzili (`https://<loyiha>.supabase.co`). Bo‘sh bo‘lsa, buyurtma va statistika lokal `.data/` fayllariga yoziladi — Netlify'da ular saqlanmaydi. |
+| `SUPABASE_SECRET_KEY` | Productionda ha | Supabase'ning maxfiy server kaliti (`sb_secret_...`). Faqat serverda ishlatiladi; ochiq `publishable`/`anon` kalit emas. |
+
+### Supabase bazasini ulash
+
+1. [supabase.com](https://supabase.com) da loyiha oching.
+2. **SQL Editor → New query** ga `supabase/migrations/0001_orders_events.sql` ni to‘liq joylashtirib, **Run** bosing.
+3. `SUPABASE_URL` va `SUPABASE_SECRET_KEY` ni `.env.local` ga (va Netlify Environment variables'ga) qo‘ying.
+4. `npm run db:check` — manzil, kalit va jadvallarni tekshiradi.
+
+Jadvallarda RLS yoqilgan va policy yo‘q: ochiq kalit bilan hech narsa o‘qib/yozib bo‘lmaydi, faqat server kaliti ishlaydi.
 
 Hech biri sirli qilib `NEXT_PUBLIC_` bilan boshlanmaydi — token/chat ID faqat serverda o‘qiladi.
 
@@ -56,6 +67,7 @@ Hech biri sirli qilib `NEXT_PUBLIC_` bilan boshlanmaydi — token/chat ID faqat 
 | `npm run smoke` | Ishlab turgan serverga tezkor tutunlik testi |
 | `npm run check:links` | Saytni boshidan yurib, o‘lik ichki havolalarni topadi |
 | `npm run check:secrets` | Klient bundle'ida token/parol kabi maxfiy qiymat sizib chiqmaganini tekshiradi |
+| `npm run db:check` | Supabase ulanishi, kalit va jadvallarni tekshiradi (kalitni ekranga chiqarmaydi) |
 | `npm run images` | `public/products/` dagi rasmlarni mahsulotlarga bog‘laydi + hisobot |
 
 Yangi kod yuborishdan oldin tavsiya etilgan tartib:

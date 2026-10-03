@@ -9,7 +9,13 @@ import { join } from "node:path";
 const ROOT = process.cwd();
 
 /** Klientga chiqmasligi kerak bo‘lgan env nomlari. */
-const FORBIDDEN_NAMES = ["TELEGRAM_BOT_TOKEN", "TELEGRAM_ADMIN_CHAT_ID", "ADMIN_PASSWORD", "ADMIN_SESSION_SECRET"];
+const FORBIDDEN_NAMES = [
+  "TELEGRAM_BOT_TOKEN",
+  "TELEGRAM_ADMIN_CHAT_ID",
+  "ADMIN_PASSWORD",
+  "ADMIN_SESSION_SECRET",
+  "SUPABASE_SECRET_KEY",
+];
 
 function readEnvFile(name) {
   const path = join(ROOT, name);

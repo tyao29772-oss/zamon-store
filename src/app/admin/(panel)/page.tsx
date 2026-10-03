@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import { CircleCheck, CircleDashed, type LucideIcon } from "lucide-react";
+import { connection } from "next/server";
+import { CircleAlert, CircleCheck, CircleDashed, type LucideIcon } from "lucide-react";
 import { getServerEnv } from "@/config/env";
+import { checkDbHealth } from "@/lib/db/supabase";
 import { countOrders } from "@/lib/repo/orders";
 import { getAllProducts } from "@/lib/repo/products";
 
@@ -9,6 +11,8 @@ export const metadata: Metadata = { title: "Dashboard" };
 interface StatusRow {
   label: string;
   ok: boolean;
+  /** Sozlangan, lekin ishlamayapti — qizil belgi. */
+  error?: boolean;
   text: string;
 }
 
@@ -22,8 +26,17 @@ function StatCard({ label, value }: { label: string; value: string }) {
 }
 
 export default async function AdminDashboardPage() {
-  const [products, orderCount] = await Promise.all([getAllProducts(), countOrders()]);
+  // Har doim so‘rov vaqtida yangi ma’lumot: build paytida bazaga murojaat qilinmaydi.
+  await connection();
+  const [products, orderCount, db] = await Promise.all([getAllProducts(), countOrders(), checkDbHealth()]);
   const env = getServerEnv();
+
+  const dbText =
+    db.state === "ok"
+      ? "Supabase ulangan — buyurtmalar va statistika bazada saqlanadi"
+      : db.state === "error"
+        ? db.message
+        : "Supabase sozlanmagan (SUPABASE_URL / SUPABASE_SECRET_KEY). Hozircha lokal fayllar (.data/) — Netlify'da saqlanmaydi";
 
   const status: StatusRow[] = [
     {
@@ -35,8 +48,9 @@ export default async function AdminDashboardPage() {
     },
     {
       label: "Ma’lumotlar bazasi",
-      ok: false,
-      text: "Hozircha lokal fayllar (.data/). Supabase keyingi bosqichda ulanadi",
+      ok: db.state === "ok",
+      error: db.state === "error",
+      text: dbText,
     },
   ];
 
@@ -47,7 +61,7 @@ export default async function AdminDashboardPage() {
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <StatCard label="Saytdagi mahsulotlar" value={products.length.toLocaleString("uz-UZ")} />
-        <StatCard label="Jami buyurtmalar" value={orderCount.toLocaleString("uz-UZ")} />
+        <StatCard label="Jami buyurtmalar" value={orderCount === null ? "—" : orderCount.toLocaleString("uz-UZ")} />
       </div>
 
       <section aria-labelledby="admin-status" className="mt-8">
@@ -56,11 +70,12 @@ export default async function AdminDashboardPage() {
         </h2>
         <ul className="mt-3 divide-y divide-line rounded-[var(--radius-card)] border border-line bg-surface">
           {status.map((row) => {
-            const Icon: LucideIcon = row.ok ? CircleCheck : CircleDashed;
+            const Icon: LucideIcon = row.ok ? CircleCheck : row.error ? CircleAlert : CircleDashed;
+            const tone = row.ok ? "text-ok" : row.error ? "text-sale" : "text-ink-muted";
             return (
               <li key={row.label} className="flex items-start gap-3 p-4">
                 <Icon
-                  className={`mt-0.5 size-5 shrink-0 ${row.ok ? "text-ok" : "text-ink-muted"}`}
+                  className={`mt-0.5 size-5 shrink-0 ${tone}`}
                   aria-hidden="true"
                 />
                 <div>

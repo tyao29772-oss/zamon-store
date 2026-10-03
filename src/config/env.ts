@@ -53,6 +53,28 @@ export function getAdminEnv(): AdminEnv {
   return { password, sessionSecret, enabled: Boolean(password && sessionSecret) };
 }
 
+export interface SupabaseEnv {
+  /** `https://<loyiha>.supabase.co` (oxirida `/` siz). */
+  url: string;
+  /** Maxfiy server kaliti (`sb_secret_...` yoki eski `service_role`). Brauzerga hech qachon chiqmaydi. */
+  secretKey: string;
+}
+
+/**
+ * Supabase sozlangan bo‘lsa — manzil va kalit, bo‘lmasa `null` (sayt lokal fayllar bilan ishlaydi).
+ * Manzil faqat `https://` (lokal sinov uchun `http://localhost` ham) bo‘lishi mumkin.
+ */
+export function getSupabaseEnv(): SupabaseEnv | null {
+  const url = cleanUrl(process.env.SUPABASE_URL);
+  const secretKey = process.env.SUPABASE_SECRET_KEY?.trim() ?? "";
+  if (!url || !secretKey) return null;
+  if (!/^https:\/\/[^/]+$/.test(url) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(url)) {
+    console.error("[env] SUPABASE_URL noto‘g‘ri — https://<loyiha>.supabase.co ko‘rinishida bo‘lishi kerak");
+    return null;
+  }
+  return { url, secretKey };
+}
+
 /** Faqat serverda chaqiriladi. Klient komponentlardan import qilinmaydi. */
 export function getServerEnv(): ServerEnv {
   const token = process.env.TELEGRAM_BOT_TOKEN?.trim() || null;

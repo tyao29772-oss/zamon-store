@@ -32,7 +32,7 @@ export function AdminNav() {
         if (!ready) {
           return (
             <span key={href} aria-disabled="true" className={`${base} cursor-not-allowed text-white/35`}>
-              <Icon className="size-4" aria-hidden="true" />
+              <Icon className="size-4 shrink-0" aria-hidden="true" />
               {label}
               <span className="ml-auto whitespace-nowrap rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wider">
                 tez kunda
@@ -50,7 +50,7 @@ export function AdminNav() {
               active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"
             }`}
           >
-            <Icon className="size-4" aria-hidden="true" />
+            <Icon className="size-4 shrink-0" aria-hidden="true" />
             {label}
           </Link>
         );
