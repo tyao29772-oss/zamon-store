@@ -44,7 +44,7 @@ if (key.startsWith("sb_publishable_") || key.includes("anon")) {
 const headers = { apikey: key };
 if (key.startsWith("eyJ")) headers.Authorization = `Bearer ${key}`;
 
-for (const table of ["orders", "events"]) {
+for (const table of ["orders", "events", "products"]) {
   try {
     const response = await fetch(`${url}/rest/v1/${table}?select=*`, {
       method: "HEAD",
@@ -57,7 +57,7 @@ for (const table of ["orders", "events"]) {
     } else if (response.status === 401 || response.status === 403) {
       fail(`«${table}»: kalit noto‘g‘ri yoki ruxsat yo‘q (${response.status}). SUPABASE_SECRET_KEY ni tekshiring.`);
     } else if (response.status === 404) {
-      fail(`«${table}» jadvali topilmadi. supabase/migrations/0001_orders_events.sql ni SQL Editor'da ishga tushiring.`);
+      fail(`«${table}» jadvali topilmadi. supabase/migrations/ dagi SQL fayllarni (0001, 0002 ...) tartib bilan SQL Editor'da ishga tushiring.`);
     } else {
       fail(`«${table}»: kutilmagan javob ${response.status}`);
     }

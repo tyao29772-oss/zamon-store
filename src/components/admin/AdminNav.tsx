@@ -15,7 +15,7 @@ interface NavItem {
 const ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard, ready: true },
   { label: "Buyurtmalar", href: "/admin/buyurtmalar", icon: ShoppingBag, ready: false },
-  { label: "Mahsulotlar", href: "/admin/mahsulotlar", icon: Package, ready: false },
+  { label: "Mahsulotlar", href: "/admin/mahsulotlar", icon: Package, ready: true },
 ];
 
 function isActive(pathname: string, href: string): boolean {

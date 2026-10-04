@@ -10,13 +10,14 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "images": "node scripts/sync-images.mjs && tsx scripts/report-images.ts",
-    "test:foundation": "tsx scripts/test-foundation.ts",
+    "images": "node scripts/sync-images.mjs && tsx --require ./scripts/lib/stub-server-only.cjs scripts/report-images.ts",
+    "test:foundation": "tsx --require ./scripts/lib/stub-server-only.cjs scripts/test-foundation.ts",
     "smoke": "node scripts/smoke.mjs",
     "check:links": "node scripts/check-links.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "e2e": "node scripts/e2e.mjs",
-    "db:check": "node scripts/db-check.mjs"
+    "db:check": "node scripts/db-check.mjs",
+    "db:seed-products": "tsx --require ./scripts/lib/stub-server-only.cjs scripts/db-seed-products.ts"
   },
   "dependencies": {
     "lucide-react": "^1.47.0",

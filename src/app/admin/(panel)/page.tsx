@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
+import Link from "next/link";
 import { CircleAlert, CircleCheck, CircleDashed, type LucideIcon } from "lucide-react";
 import { getServerEnv } from "@/config/env";
 import { checkDbHealth } from "@/lib/db/supabase";
 import { countOrders } from "@/lib/repo/orders";
-import { getAllProducts } from "@/lib/repo/products";
+import { countByStatus, toAdminRow } from "@/lib/admin/product-list";
+import { formatNumber } from "@/lib/format";
+import { getAllProductsForAdmin } from "@/lib/repo/products";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -16,19 +19,29 @@ interface StatusRow {
   text: string;
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[var(--radius-card)] border border-line bg-surface p-5">
+function StatCard({ label, value, href, tone }: { label: string; value: string; href?: string; tone?: "warn" | "sale" }) {
+  const valueColor = tone === "warn" ? "text-warn" : tone === "sale" ? "text-sale" : "text-ink";
+  const body = (
+    <>
       <p className="text-sm text-ink-muted">{label}</p>
-      <p className="mt-2 text-3xl font-semibold tabular-nums text-ink">{value}</p>
-    </div>
+      <p className={`mt-2 text-3xl font-semibold tabular-nums ${valueColor}`}>{value}</p>
+    </>
+  );
+  const box = "block rounded-[var(--radius-card)] border border-line bg-surface p-5";
+  return href ? (
+    <Link href={href} className={`${box} transition-colors hover:border-ink/30`}>
+      {body}
+    </Link>
+  ) : (
+    <div className={box}>{body}</div>
   );
 }
 
 export default async function AdminDashboardPage() {
   // Har doim so‘rov vaqtida yangi ma’lumot: build paytida bazaga murojaat qilinmaydi.
   await connection();
-  const [products, orderCount, db] = await Promise.all([getAllProducts(), countOrders(), checkDbHealth()]);
+  const [products, orderCount, db] = await Promise.all([getAllProductsForAdmin(), countOrders(), checkDbHealth()]);
+  const productCounts = countByStatus(products.map(toAdminRow));
   const env = getServerEnv();
 
   const dbText =
@@ -59,9 +72,11 @@ export default async function AdminDashboardPage() {
       <h1 className="text-2xl font-semibold text-ink">Dashboard</h1>
       <p className="mt-1 text-sm text-ink-muted">Do‘kon holati bir qarashda.</p>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        <StatCard label="Saytdagi mahsulotlar" value={products.length.toLocaleString("uz-UZ")} />
-        <StatCard label="Jami buyurtmalar" value={orderCount === null ? "—" : orderCount.toLocaleString("uz-UZ")} />
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Saytdagi mahsulotlar" value={formatNumber(productCounts.saytda)} href="/admin/mahsulotlar?holat=saytda" />
+        <StatCard label="Jami buyurtmalar" value={orderCount === null ? "—" : formatNumber(orderCount)} />
+        <StatCard label="Kam qolgan" value={formatNumber(productCounts.kam)} href="/admin/mahsulotlar?holat=kam" tone={productCounts.kam > 0 ? "warn" : undefined} />
+        <StatCard label="Tugagan" value={formatNumber(productCounts.tugagan)} href="/admin/mahsulotlar?holat=tugagan" tone={productCounts.tugagan > 0 ? "sale" : undefined} />
       </div>
 
       <section aria-labelledby="admin-status" className="mt-8">

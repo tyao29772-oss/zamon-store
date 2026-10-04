@@ -71,6 +71,15 @@ import { createSearchEngine, expandSearchQuery } from "@/lib/search";
 import { buildBreadcrumbJsonLd, buildProductJsonLd, toJsonLd } from "@/lib/seo";
 import { buildOrderMessage, createTelegramLink, escapeTelegramHtml } from "@/lib/telegram";
 import { absoluteUrl, productHref } from "@/lib/urls";
+import {
+  countByStatus,
+  filterAdminRows,
+  parseSort,
+  parseStatus,
+  toAdminRow,
+  type AdminListQuery,
+} from "@/lib/admin/product-list";
+import { productSchema, productToRow, rowToProduct } from "@/lib/repo/product-rows";
 import type { Product, ProductVariant } from "@/types";
 
 let passed = 0;
@@ -1041,6 +1050,88 @@ async function main(): Promise<void> {
       assert.ok(group.length >= 2);
       for (const term of group) assert.ok(normalizeText(term).length > 0, term);
     }
+  });
+
+  section("Admin: mahsulotlar ro‘yxati va baza qatori");
+
+  const adminRows = [
+    makeProduct({
+      id: "a-phone",
+      name: "Alpha Phone",
+      createdAt: "2026-03-01T00:00:00.000Z",
+      variants: [
+        makeVariant({ id: "a1", sku: "ALP-128", price: 5_000_000, oldPrice: 6_000_000, stock: 2 }),
+        makeVariant({ id: "a2", price: 7_000_000, stock: 0 }),
+      ],
+    }),
+    makeProduct({
+      id: "b-phone",
+      name: "Beta Phone",
+      brandId: "brandy",
+      createdAt: "2026-02-01T00:00:00.000Z",
+      variants: [makeVariant({ id: "b1", price: 3_000_000, stock: 0 })],
+    }),
+    makeProduct({
+      id: "c-case",
+      name: "Gamma g‘ilof",
+      isPublished: false,
+      variants: [makeVariant({ id: "c1", price: 100_000, stock: 40 })],
+    }),
+  ].map(toAdminRow);
+  const adminQuery: AdminListQuery = { q: "", status: "hammasi", categoryIds: null, brandId: null, sort: "yangi" };
+  const adminIds = (patch: Partial<AdminListQuery>) =>
+    filterAdminRows(adminRows, { ...adminQuery, ...patch }).map((row) => row.product.id);
+
+  await check("toAdminRow: narx oralig‘i, jami qoldiq, chegirma", () => {
+    const row = adminRows[0]!;
+    assert.equal(row.minPrice, 5_000_000);
+    assert.equal(row.maxPrice, 7_000_000);
+    assert.equal(row.totalStock, 2);
+    assert.equal(row.variantCount, 2);
+    assert.equal(row.stockStatus, "low");
+    assert.equal(adminRows[2]!.stockStatus, "in_stock");
+    assert.ok(row.maxDiscount > 0);
+  });
+
+  await check("countByStatus: saytda / yashirin / kam / tugagan / chegirma", () => {
+    assert.deepEqual(countByStatus(adminRows), { hammasi: 3, saytda: 2, yashirin: 1, kam: 1, tugagan: 1, chegirma: 1 });
+  });
+
+  await check("filterAdminRows: holat, brend, kategoriya, qidiruv (SKU, o‘/g‘ farqisiz)", () => {
+    assert.deepEqual(adminIds({ status: "tugagan" }), ["b-phone"]);
+    assert.deepEqual(adminIds({ status: "yashirin" }), ["c-case"]);
+    assert.deepEqual(adminIds({ brandId: "brandy" }), ["b-phone"]);
+    assert.deepEqual(adminIds({ q: "alp-128" }), ["a-phone"]);
+    assert.deepEqual(adminIds({ q: "gilof" }), ["c-case"]);
+    assert.deepEqual(adminIds({ categoryIds: new Set(["boshqa"]) }), []);
+  });
+
+  await check("filterAdminRows: saralash va noto‘g‘ri parametrlar", () => {
+    assert.deepEqual(adminIds({ sort: "yangi" }), ["a-phone", "b-phone", "c-case"]);
+    assert.deepEqual(adminIds({ sort: "narx-osish" }), ["c-case", "b-phone", "a-phone"]);
+    assert.deepEqual(adminIds({ sort: "qoldiq" }), ["b-phone", "a-phone", "c-case"]);
+    assert.equal(parseSort("yoq"), "yangi");
+    assert.equal(parseStatus("yoq"), "hammasi");
+  });
+
+  await check("productToRow → rowToProduct: barcha mahsulotlar o‘zgarmay qaytadi va sxemadan o‘tadi", () => {
+    for (const product of allProducts) {
+      const back = rowToProduct(JSON.parse(JSON.stringify(productToRow(product))));
+      assert.deepEqual(JSON.parse(JSON.stringify(back)), JSON.parse(JSON.stringify(product)), product.slug);
+      const parsed = productSchema.safeParse(product);
+      assert.ok(parsed.success, `${product.slug}: ${parsed.success ? "" : parsed.error.issues[0]?.message}`);
+    }
+  });
+
+  await check("productSchema: noto‘g‘ri ma’lumot rad etiladi", () => {
+    const good = allProducts[0]!;
+    const accepts = (patch: Partial<Product>) => productSchema.safeParse({ ...good, ...patch }).success;
+    assert.equal(accepts({}), true);
+    assert.equal(accepts({ id: "Katta Harf", slug: "Katta Harf" }), false);
+    assert.equal(accepts({ name: "" }), false);
+    assert.equal(accepts({ variants: [] }), false);
+    assert.equal(accepts({ variants: [{ ...good.variants[0]!, price: -1 }] }), false);
+    assert.equal(accepts({ variants: [good.variants[0]!, good.variants[0]!] }), false);
   });
 
   console.log(`\n${passed} ta tekshiruv o‘tdi, ${failures.length} ta yiqildi.`);

@@ -45,9 +45,12 @@ Brauzerda [http://localhost:3000](http://localhost:3000) ni oching.
 ### Supabase bazasini ulash
 
 1. [supabase.com](https://supabase.com) da loyiha oching.
-2. **SQL Editor → New query** ga `supabase/migrations/0001_orders_events.sql` ni to‘liq joylashtirib, **Run** bosing.
+2. **SQL Editor → New query** da `supabase/migrations/` dagi fayllarni tartib bilan (`0001_…`, `0002_…`) to‘liq joylashtirib, **Run** bosing.
 3. `SUPABASE_URL` va `SUPABASE_SECRET_KEY` ni `.env.local` ga (va Netlify Environment variables'ga) qo‘ying.
 4. `npm run db:check` — manzil, kalit va jadvallarni tekshiradi.
+5. `npm run db:seed-products` — `src/data/products` dagi mahsulotlarni bazaga ko‘chiradi (faqat yo‘qlarini qo‘shadi, admin tahrirlariga tegmaydi). Shundan keyin sayt mahsulotlarni bazadan o‘qiydi, ularni admin paneldan boshqarasiz.
+
+⚠️ Supabase sozlangan bo‘lsa, `npm run build` ham mahsulotlarni bazadan oladi — jadval yo‘q yoki bo‘sh bo‘lsa, avval 2- va 5-qadamni bajaring. Testlarni bazaga yozmasdan ishlatish: `SUPABASE_URL= npm run build`.
 
 Jadvallarda RLS yoqilgan va policy yo‘q: ochiq kalit bilan hech narsa o‘qib/yozib bo‘lmaydi, faqat server kaliti ishlaydi.
 
@@ -68,6 +71,7 @@ Hech biri sirli qilib `NEXT_PUBLIC_` bilan boshlanmaydi — token/chat ID faqat 
 | `npm run check:links` | Saytni boshidan yurib, o‘lik ichki havolalarni topadi |
 | `npm run check:secrets` | Klient bundle'ida token/parol kabi maxfiy qiymat sizib chiqmaganini tekshiradi |
 | `npm run db:check` | Supabase ulanishi, kalit va jadvallarni tekshiradi (kalitni ekranga chiqarmaydi) |
+| `npm run db:seed-products` | Kod fayllaridagi mahsulotlarni bazaga ko‘chiradi (mavjudlariga tegmaydi; `-- --force` — ustidan yozadi) |
 | `npm run images` | `public/products/` dagi rasmlarni mahsulotlarga bog‘laydi + hisobot |
 
 Yangi kod yuborishdan oldin tavsiya etilgan tartib:

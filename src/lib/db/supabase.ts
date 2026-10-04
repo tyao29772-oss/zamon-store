@@ -82,6 +82,44 @@ export async function dbInsertQuiet(table: string, row: Record<string, unknown>)
   });
 }
 
+/** Supabase bitta javobda ko‘pi bilan shuncha qator beradi (Data API `max_rows`). */
+const PAGE_SIZE = 1000;
+
+/**
+ * Barcha mos qatorlarni sahifalab o‘qiydi. `query` — PostgREST parametrlari,
+ * masalan `select=*&order=created_at.desc`.
+ */
+export async function dbSelectAll<Row>(table: string, query: string): Promise<Row[]> {
+  const rows: Row[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const response = await request(`${table}?${query}`, {
+      method: "GET",
+      headers: { Range: `${from}-${from + PAGE_SIZE - 1}`, "Range-Unit": "items" },
+    });
+    const page = (await response.json()) as Row[];
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) return rows;
+  }
+}
+
+/**
+ * Bir nechta qatorni qo‘shadi. Birlamchi kalit bo‘yicha mavjud qator: `merge` — yangilanadi,
+ * `ignore` — tegilmaydi (masalan, seed admin tahrirlarini bosib ketmasligi uchun).
+ */
+export async function dbUpsert(
+  table: string,
+  rows: Record<string, unknown>[],
+  onConflict: "merge" | "ignore" = "merge",
+): Promise<void> {
+  if (rows.length === 0) return;
+  const resolution = onConflict === "merge" ? "merge-duplicates" : "ignore-duplicates";
+  await request(table, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Prefer: `resolution=${resolution},return=minimal` },
+    body: JSON.stringify(rows),
+  });
+}
+
 /** Jadvaldagi qatorlar soni. `query` — PostgREST filtri, masalan `status=eq.new`. */
 export async function dbCount(table: string, query = ""): Promise<number> {
   const response = await request(`${table}?select=*${query ? `&${query}` : ""}`, {
@@ -104,7 +142,7 @@ export type DbHealth =
 export async function checkDbHealth(): Promise<DbHealth> {
   if (!isDbConfigured()) return { state: "not_configured" };
   try {
-    await Promise.all([dbCount("orders"), dbCount("events")]);
+    await Promise.all([dbCount("orders"), dbCount("events"), dbCount("products")]);
     return { state: "ok" };
   } catch (error) {
     const status = error instanceof DbError ? error.status : undefined;
