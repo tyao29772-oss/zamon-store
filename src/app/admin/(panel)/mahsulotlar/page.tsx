@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { ChevronLeft, ChevronRight, EyeOff, ExternalLink, PackageSearch, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, EyeOff, ExternalLink, PackageSearch, Pencil, Plus, Search } from "lucide-react";
 import { ProductImage } from "@/components/product/ProductImage";
 import { StockBadge } from "@/components/product/StockBadge";
 import {
@@ -114,6 +114,13 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
             Jami {formatNumber(allRows.length)} ta mahsulot, {formatNumber(countByStatus(allRows).saytda)} tasi saytda.
           </p>
         </div>
+        <Link
+          href="/admin/mahsulotlar/yangi"
+          className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-white hover:bg-black"
+        >
+          <Plus className="size-4" aria-hidden="true" />
+          Yangi mahsulot
+        </Link>
       </div>
 
       {/* Holat tablari */}
@@ -137,9 +144,9 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
       </nav>
 
       {/* Qidiruv va filtrlar (JS'siz ham ishlaydi) */}
-      <form action={BASE} className="mt-4 grid gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 md:grid-cols-[1fr_auto_auto_auto_auto]">
+      <form action={BASE} className="mt-4 grid gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 sm:grid-cols-2 xl:grid-cols-[1fr_auto_auto_auto_auto]">
         {status !== "hammasi" && <input type="hidden" name="holat" value={status} />}
-        <label className="relative block">
+        <label className="relative block sm:col-span-2 xl:col-span-1">
           <span className="sr-only">Qidirish</span>
           <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-ink-muted" aria-hidden="true" />
           <input
@@ -155,7 +162,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
           <select
             name="kategoriya"
             defaultValue={category?.id ?? ""}
-            className="h-11 w-full rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none focus:border-accent md:w-48"
+            className="h-11 w-full rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none focus:border-accent xl:w-48"
           >
             <option value="">Barcha kategoriyalar</option>
             {roots.map((root) => (
@@ -175,7 +182,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
           <select
             name="brend"
             defaultValue={brandId ?? ""}
-            className="h-11 w-full rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none focus:border-accent md:w-40"
+            className="h-11 w-full rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none focus:border-accent xl:w-40"
           >
             <option value="">Barcha brendlar</option>
             {brands.map((brand) => (
@@ -190,7 +197,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
           <select
             name="saralash"
             defaultValue={sort}
-            className="h-11 w-full rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none focus:border-accent md:w-44"
+            className="h-11 w-full rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none focus:border-accent xl:w-44"
           >
             {ADMIN_SORTS.map((option) => (
               <option key={option.key} value={option.key}>
@@ -199,8 +206,8 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
             ))}
           </select>
         </label>
-        <div className="flex gap-2">
-          <button type="submit" className="h-11 flex-1 rounded-xl bg-ink px-5 text-sm font-semibold text-white hover:bg-black md:flex-none">
+        <div className="flex gap-2 sm:col-span-1">
+          <button type="submit" className="h-11 flex-1 rounded-xl bg-ink px-5 text-sm font-semibold text-white hover:bg-black xl:flex-none">
             Qo‘llash
           </button>
           {hasFilters && (
@@ -244,7 +251,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
                         <div className="flex items-center gap-3">
                           <ProductImage product={product} sizes="56px" className="size-14 shrink-0 rounded-xl bg-page-2" />
                           <div className="min-w-0">
-                            <p className="font-medium text-ink">{product.name}</p>
+                            <Link href={`/admin/mahsulotlar/${product.id}`} className="font-medium text-ink hover:underline">{product.name}</Link>
                             <p className="text-xs text-ink-muted">
                               {brandById.get(product.brandId)?.name ?? product.brandId} ·{" "}
                               {categoryById.get(product.categoryId)?.name ?? product.categoryId} · {row.variantCount} variant
@@ -258,7 +265,14 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
                         <StockBadge status={row.stockStatus} className="mt-1" />
                       </td>
                       <td className="px-4 py-3"><VisibilityBadge published={product.isPublished} /></td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="whitespace-nowrap px-4 py-3 text-right">
+                        <Link
+                          href={`/admin/mahsulotlar/${product.id}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-ink px-3 py-1.5 text-xs font-semibold text-white hover:bg-black"
+                        >
+                          <Pencil className="size-3.5" aria-hidden="true" />
+                          Tahrirlash
+                        </Link>
                         {product.isPublished && (
                           <a
                             href={productHref(product.slug)}
@@ -283,10 +297,10 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
             {result.items.map((row) => {
               const { product } = row;
               return (
-                <li key={product.id} className="flex gap-3 rounded-2xl border border-line bg-surface p-3">
+                <li key={product.id} className="relative flex gap-3 rounded-2xl border border-line bg-surface p-3 transition-colors hover:border-ink/30">
                   <ProductImage product={product} sizes="72px" className="size-[72px] shrink-0 rounded-xl bg-page-2" />
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium leading-snug text-ink">{product.name}</p>
+                    <Link href={`/admin/mahsulotlar/${product.id}`} className="font-medium leading-snug text-ink after:absolute after:inset-0 after:rounded-2xl">{product.name}</Link>
                     <p className="mt-0.5 text-xs text-ink-muted">
                       {brandById.get(product.brandId)?.name ?? product.brandId} · {row.variantCount} variant ·{" "}
                       {formatNumber(row.totalStock)} dona

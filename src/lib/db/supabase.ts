@@ -120,6 +120,19 @@ export async function dbUpsert(
   });
 }
 
+/**
+ * Filtrga mos qatorlarni yangilaydi va yangilangan qatorlarni qaytaradi (bo‘sh ro‘yxat —
+ * hech narsa mos kelmadi). `query` — PostgREST filtri, masalan `id=eq.abc`.
+ */
+export async function dbUpdate<Row>(table: string, query: string, patch: Record<string, unknown>): Promise<Row[]> {
+  const response = await request(`${table}?${query}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Prefer: "return=representation" },
+    body: JSON.stringify(patch),
+  });
+  return (await response.json()) as Row[];
+}
+
 /** Jadvaldagi qatorlar soni. `query` — PostgREST filtri, masalan `status=eq.new`. */
 export async function dbCount(table: string, query = ""): Promise<number> {
   const response = await request(`${table}?select=*${query ? `&${query}` : ""}`, {

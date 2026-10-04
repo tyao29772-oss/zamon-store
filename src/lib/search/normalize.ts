@@ -52,7 +52,7 @@ const CYRILLIC_TO_LATIN: Record<string, string> = {
 
 const APOSTROPHES = /['`´ʻʼ‘’′ʹ]/g;
 
-function transliterate(text: string): string {
+export function transliterate(text: string): string {
   let result = "";
   for (const char of text) {
     result += CYRILLIC_TO_LATIN[char] ?? char;

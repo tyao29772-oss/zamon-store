@@ -79,6 +79,18 @@ import {
   toAdminRow,
   type AdminListQuery,
 } from "@/lib/admin/product-list";
+import {
+  addMatrixVariants,
+  buildProductFromInput,
+  emptyFormValues,
+  flattenIssues,
+  getAttributeKeys,
+  getCategoryOptions,
+  parseMoney,
+  productInputSchema,
+  productToFormValues,
+  slugify,
+} from "@/lib/admin/product-form";
 import { productSchema, productToRow, rowToProduct } from "@/lib/repo/product-rows";
 import type { Product, ProductVariant } from "@/types";
 
@@ -1132,6 +1144,108 @@ async function main(): Promise<void> {
     assert.equal(accepts({ variants: [] }), false);
     assert.equal(accepts({ variants: [{ ...good.variants[0]!, price: -1 }] }), false);
     assert.equal(accepts({ variants: [good.variants[0]!, good.variants[0]!] }), false);
+  });
+
+  section("Admin: mahsulot formasi");
+
+  await check("slugify: o‘zbekcha, kirill, belgilar", () => {
+    assert.equal(slugify("iPhone 15 Pro Max"), "iphone-15-pro-max");
+    assert.equal(slugify("G‘ilof «Shaffof» (o‘zbek)"), "gilof-shaffof-ozbek");
+    assert.equal(slugify("Телефон Самсунг"), "telefon-samsung");
+    assert.equal(slugify("  --Xiaomi  14--  "), "xiaomi-14");
+  });
+
+  await check("parseMoney: bo‘shliq va so‘m bilan", () => {
+    assert.equal(parseMoney("14 500 000 so‘m"), 14_500_000);
+    assert.equal(parseMoney("14 500 000"), 14_500_000);
+    assert.ok(Number.isNaN(parseMoney("narx")));
+  });
+
+  await check("formadan saqlash: 63 ta mahsulotning hammasi o‘zgarishsiz qaytadi", () => {
+    for (const product of allProducts) {
+      const parsed = productInputSchema.safeParse(productToFormValues(product));
+      assert.ok(parsed.success, `${product.slug}: ${parsed.success ? "" : JSON.stringify(flattenIssues(parsed.error.issues))}`);
+      const built = buildProductFromInput(parsed.data, product, product.updatedAt);
+      assert.deepEqual(JSON.parse(JSON.stringify(built)), JSON.parse(JSON.stringify(product)), product.slug);
+      assert.ok(productSchema.safeParse(built).success, product.slug);
+    }
+  });
+
+  await check("formadan saqlash: narx o‘zgarsa, faqat narx o‘zgaradi va variant id saqlanadi", () => {
+    const product = allProducts.find((p) => p.slug === "iphone-15-pro-max")!;
+    const values = productToFormValues(product);
+    values.variants[0]!.price = "13 999 000";
+    const built = buildProductFromInput(productInputSchema.parse(values), product, "2026-10-05T00:00:00.000Z");
+    assert.equal(built.variants[0]!.price, 13_999_000);
+    assert.equal(built.variants[0]!.id, product.variants[0]!.id);
+    assert.deepEqual(JSON.parse(JSON.stringify(built.variants.slice(1))), JSON.parse(JSON.stringify(product.variants.slice(1))));
+    assert.equal(built.updatedAt, "2026-10-05T00:00:00.000Z");
+    assert.equal(built.createdAt, product.createdAt);
+  });
+
+  await check("yangi mahsulot: id/SKU avtomatik, noyob, boshqa mahsulot id'si o‘g‘irlanmaydi", () => {
+    const values = emptyFormValues();
+    values.name = "Test Telefon X";
+    values.slug = slugify(values.name);
+    values.brandId = "apple";
+    values.categoryId = "telefonlar-iphone";
+    values.variants = addMatrixVariants(values.variants, {
+      colors: [{ name: "Qora", hex: "#111111" }, { name: "Ko‘k", hex: "#2233AA" }],
+      storages: ["128GB", "256GB"],
+      condition: "new",
+      warrantyMonths: "12",
+      simType: "",
+      price: "5000000",
+      stock: "2",
+    });
+    assert.equal(values.variants.length, 4, "bo‘sh qator jadval bilan almashishi kerak");
+    // Soxta: boshqa mahsulotning variant id'sini yuborish.
+    values.variants[0]!.id = "iphone-15-pro-max-256gb-natural-titanium-new";
+    const built = buildProductFromInput(productInputSchema.parse(values), null, "2026-10-05T00:00:00.000Z");
+    const ids = built.variants.map((v) => v.id);
+    assert.equal(new Set(ids).size, 4);
+    assert.ok(ids.every((id) => id.startsWith("test-telefon-x-")), ids.join(", "));
+    assert.ok(built.variants.every((v) => v.sku.length > 0));
+    assert.equal(built.popularity, 0);
+    assert.ok(productSchema.safeParse(built).success);
+    // Qayta bosish takror qo‘shmaydi.
+    const again = addMatrixVariants(values.variants, { colors: [{ name: "Qora", hex: "#111111" }], storages: ["128GB"], condition: "new", warrantyMonths: "12", simType: "", price: "", stock: "1" });
+    assert.equal(again.length, 4);
+  });
+
+  await check("forma tekshiruvi: tushunarli xatolar to‘g‘ri maydonga tushadi", () => {
+    const values = emptyFormValues();
+    values.variants[0]!.price = "";
+    values.variants.push({ ...values.variants[0]!, key: "x", price: "100", oldPrice: "50" });
+    const result = productInputSchema.safeParse({ ...values, slug: "Yomon Manzil" });
+    assert.ok(!result.success);
+    const errors = flattenIssues(result.error.issues);
+    assert.ok(errors.name, "nom");
+    assert.ok(errors.slug, "manzil");
+    assert.ok(errors.brandId, "brend");
+    assert.ok(errors.categoryId, "kategoriya");
+    assert.ok(errors["variants.0.price"], "narx");
+    assert.ok(errors["variants.1.oldPrice"]?.includes("Eski narx"), "eski narx");
+    assert.ok(errors["variants.1.color"]?.includes("bir xil"), "takroriy variant");
+    assert.equal(productInputSchema.safeParse({ ...values, slug: "yangi" }).success, false);
+    assert.equal(productInputSchema.safeParse({ ...values, categoryId: "telefonlar" }).success, false, "ildiz kategoriya emas, barg kerak");
+  });
+
+  await check("atributlar: kategoriyaga mos maydonlar, boshqarilmaydiganlar saqlanadi", () => {
+    assert.deepEqual(getAttributeKeys("laptoplar-hp"), ["cpu", "gpu", "screenSize"]);
+    assert.deepEqual(getAttributeKeys("aksessuarlar-chexollar"), ["compatibility", "material"]);
+    assert.deepEqual(getAttributeKeys("telefonlar-iphone"), []);
+    const powerbank = allProducts.find((p) => p.attributes.capacity !== undefined)!;
+    const values = productToFormValues(powerbank);
+    const built = buildProductFromInput(productInputSchema.parse(values), powerbank, powerbank.updatedAt);
+    assert.equal(built.attributes.capacity, powerbank.attributes.capacity);
+  });
+
+  await check("kategoriya tanlovi: faqat barglar, to‘liq yo‘l bilan", () => {
+    const options = getCategoryOptions();
+    assert.equal(options.length, 25);
+    assert.ok(options.some((o) => o.label === "Zaryadchiklar › Adapterlar" && o.rootName === "Aksessuarlar"));
+    assert.ok(!options.some((o) => o.id === "telefonlar"));
   });
 
   console.log(`\n${passed} ta tekshiruv o‘tdi, ${failures.length} ta yiqildi.`);
