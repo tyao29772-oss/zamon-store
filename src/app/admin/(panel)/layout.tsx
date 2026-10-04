@@ -55,7 +55,8 @@ export default async function AdminPanelLayout({ children }: { children: ReactNo
         </div>
       </aside>
 
-      <main id="main" className="min-w-0 px-4 py-6 md:px-8 md:py-8">
+      {/* pb-24: pastki o‘ng burchakdagi Netlify belgisi oxirgi tugmalarni (sahifalash) to‘smasin */}
+      <main id="main" className="min-w-0 px-4 pb-24 pt-6 md:px-8 md:pt-8">
         {children}
       </main>
     </div>

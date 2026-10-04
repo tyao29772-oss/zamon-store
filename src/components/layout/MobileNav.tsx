@@ -65,6 +65,7 @@ export function MobileNav() {
   return (
     <nav
       aria-label="Pastki menyu"
+      data-mobile-nav=""
       className="fixed inset-x-0 bottom-0 z-50 border-t border-line/80 bg-page/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
     >
       <div className="mx-auto flex max-w-xl">

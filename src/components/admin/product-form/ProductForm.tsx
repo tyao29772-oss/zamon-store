@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { AlertTriangle, ExternalLink, LoaderCircle, RefreshCw, Save } from "lucide-react";
@@ -120,23 +119,60 @@ export function ProductForm({ mode, initialValues, brands, categories, canSave }
       setErrors({});
       if (result.created) {
         setSaved(snapshot(values));
-        toast.show("Mahsulot qo‘shildi");
-        router.replace(`/admin/mahsulotlar/${result.id}`);
+        toast.show(values.isPublished ? "Mahsulot saytga joylandi" : "Mahsulot saqlandi");
+        router.replace(`/admin/mahsulotlar/${result.id}?saqlandi=yangi`, { scroll: true });
       } else {
         const next = { ...values, updatedAt: result.updatedAt };
         setValues(next);
         setSaved(snapshot(next));
         toast.show("O‘zgarishlar saqlandi");
-        router.refresh();
+        router.replace(`/admin/mahsulotlar/${result.id}?saqlandi=1`, { scroll: true });
       }
     });
   };
 
   const rootsInOrder = [...new Set(categories.map((c) => c.rootName))];
 
+  const saveDisabled = !canSave || pending || (!dirty && mode === "edit");
+  const saveLabel =
+    mode === "create"
+      ? values.isPublished
+        ? "Saqlash va saytga joylash"
+        : "Saqlash (saytda yashirin)"
+      : dirty
+        ? values.isPublished
+          ? "Saqlash — saytda yangilanadi"
+          : "Saqlash (saytda yashirin)"
+        : "Hammasi saqlangan";
+  const shortLabel = mode === "create" ? (values.isPublished ? "Saytga joylash" : "Saqlash") : dirty ? "Saqlash" : "Saqlangan";
+  const statusText = pending
+    ? "Saqlanmoqda…"
+    : uploading
+      ? "Rasmlar yuklanmoqda…"
+      : dirty
+        ? "Saqlanmagan o‘zgarishlar bor"
+        : mode === "edit"
+          ? "Hammasi saqlangan"
+          : "Ma’lumotlarni to‘ldiring";
+  const saveIcon = pending || uploading ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />;
+
   return (
     <FieldErrorsContext.Provider value={errors}>
-      <form ref={formRef} onSubmit={submit} noValidate className="pb-28 xl:pb-0">
+      <form ref={formRef} onSubmit={submit} noValidate>
+        {/* Kichik ekranlarda: tepada doim ko‘rinadigan saqlash paneli */}
+        <div className="sticky top-0 z-30 -mx-4 mb-4 border-b border-line bg-page/95 px-4 py-2.5 backdrop-blur md:-mx-8 md:px-8 xl:hidden">
+          <div className="flex items-center gap-3">
+            <p className={`min-w-0 flex-1 truncate text-xs ${dirty ? "font-medium text-warn" : "text-ink-muted"}`}>{statusText}</p>
+            <button
+              type="submit"
+              disabled={saveDisabled}
+              className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-white disabled:opacity-40"
+            >
+              {saveIcon}
+              {shortLabel}
+            </button>
+          </div>
+        </div>
         {!canSave && (
           <p className="mb-4 rounded-2xl bg-warn-soft p-4 text-sm text-warn">
             Baza (Supabase) ulanmagan — formani ko‘rish mumkin, lekin saqlab bo‘lmaydi.
@@ -317,12 +353,15 @@ export function ProductForm({ mode, initialValues, brands, categories, canSave }
               </dl>
               <button
                 type="submit"
-                disabled={!canSave || pending || (!dirty && mode === "edit")}
-                className="mt-4 hidden h-12 w-full items-center justify-center gap-2 rounded-full bg-ink text-sm font-semibold text-white transition-colors hover:bg-black disabled:opacity-40 xl:inline-flex"
+                disabled={saveDisabled}
+                className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-ink px-4 text-sm font-semibold text-white transition-colors hover:bg-black disabled:opacity-40"
               >
-                {pending || uploading ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
-                {mode === "create" ? "Mahsulotni qo‘shish" : dirty ? "O‘zgarishlarni saqlash" : "Saqlangan"}
+                {saveIcon}
+                {saveLabel}
               </button>
+              {!values.isPublished && (
+                <p className="mt-2 text-center text-xs text-ink-muted">«Saytda ko‘rsatish» o‘chiq — mahsulot saytda ko‘rinmaydi.</p>
+              )}
               {mode === "edit" && values.isPublished && (
                 <a href={`/mahsulot/${values.slug}`} target="_blank" rel="noopener" className="mt-3 inline-flex w-full items-center justify-center gap-1.5 text-sm text-ink-muted hover:text-ink">
                   <ExternalLink className="size-3.5" aria-hidden="true" /> Saytda ko‘rish
@@ -333,25 +372,6 @@ export function ProductForm({ mode, initialValues, brands, categories, canSave }
           </aside>
         </div>
 
-        {/* Telefon/planshet: pastda doim ko‘rinadigan saqlash paneli */}
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur xl:hidden">
-          <div className="mx-auto flex max-w-3xl items-center gap-3">
-            <p className="min-w-0 flex-1 truncate text-xs text-ink-muted">
-              {pending ? "Saqlanmoqda…" : uploading ? "Rasmlar yuklanmoqda…" : dirty ? "Saqlanmagan o‘zgarishlar bor" : mode === "edit" ? "Hammasi saqlangan" : "Ma’lumotlarni to‘ldiring"}
-            </p>
-            <Link href="/admin/mahsulotlar" className="rounded-full px-4 py-2.5 text-sm font-medium text-ink-muted hover:text-ink">
-              Orqaga
-            </Link>
-            <button
-              type="submit"
-              disabled={!canSave || pending || (!dirty && mode === "edit")}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-white disabled:opacity-40"
-            >
-              {pending || uploading ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
-              {mode === "create" ? "Qo‘shish" : "Saqlash"}
-            </button>
-          </div>
-        </div>
       </form>
     </FieldErrorsContext.Provider>
   );

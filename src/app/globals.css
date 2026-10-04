@@ -201,3 +201,14 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * Netlify bepul tarifda saytga «Powered by Netlify» belgisini qo'shadi (iframe, pastki o'ng
+ * burchak). Telefonda u pastki menyuni (Qidiruv, Sevimlilar, Aloqa) to'sib qo'yardi — belgini
+ * YASHIRMAYMIZ, faqat pastki menyu va sticky buyurtma paneli ustiga ko'taramiz.
+ */
+@media (max-width: 1023.98px) {
+  body:has([data-mobile-nav]) #nl-badge-frame {
+    bottom: calc(57px + env(safe-area-inset-bottom) + var(--sticky-bottom-bar) + 8px) !important;
+  }
+}
