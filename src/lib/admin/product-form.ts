@@ -88,6 +88,8 @@ export function getAttributeKeys(categoryId: string): AttributeKey[] {
 
 /* ------------------------------------------------------------------ Forma qiymatlari */
 
+export const MAX_IMAGES = 10;
+
 export interface VariantFormValue {
   /** Faqat React ro‘yxati uchun kalit. */
   key: string;
@@ -123,6 +125,8 @@ export interface ProductFormValues {
   featured: boolean;
   /** Kategoriyaga xos atributlar; ro‘yxatlar vergul bilan. */
   attributes: Partial<Record<AttributeKey, string>>;
+  /** Rasm manzillari; birinchisi — asosiy rasm. */
+  images: string[];
   specs: SpecGroup[];
   variants: VariantFormValue[];
   /** Tahrirlashda: forma ochilgandagi versiya (boshqa joyda o‘zgartirilganini aniqlash uchun). */
@@ -175,6 +179,7 @@ export function emptyFormValues(): ProductFormValues {
     isPublished: true,
     featured: false,
     attributes: {},
+    images: [],
     specs: [],
     variants: [emptyVariant()],
   };
@@ -203,6 +208,7 @@ export function productToFormValues(product: Product): ProductFormValues {
     isPublished: product.isPublished,
     featured: product.featured,
     attributes,
+    images: product.images,
     specs: product.specs,
     variants: product.variants.map((v) => ({
       key: newKey(),
@@ -455,6 +461,7 @@ export const productInputSchema = z
       z.enum(["cpu", "gpu", "screenSize", "material", "power", "port", "compatibility"]),
       text(500, "Xususiyat"),
     ),
+    images: z.array(z.string().trim().min(1).max(500)).max(MAX_IMAGES, `Ko‘pi bilan ${MAX_IMAGES} ta rasm`),
     specs: z
       .array(
         z.object({
@@ -579,7 +586,8 @@ export function buildProductFromInput(input: ProductInput, existing: Product | n
     model: input.model.trim() || undefined,
     shortDescription: input.shortDescription.trim(),
     description: input.description.trim(),
-    images: existing?.images ?? [],
+    // Rasm manzillarining kelib chiqishini server action tekshiradi (faqat o‘z papkamiz yoki eskilari).
+    images: [...new Set(input.images)],
     heroImage: existing?.heroImage,
     variants,
     specs: cleanSpecs(input.specs),

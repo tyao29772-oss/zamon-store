@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { AlertTriangle, ExternalLink, ImageIcon, LoaderCircle, RefreshCw, Save } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { AlertTriangle, ExternalLink, LoaderCircle, RefreshCw, Save } from "lucide-react";
 import { saveProductAction, type SaveProductTarget } from "@/app/admin/(panel)/mahsulotlar/actions";
 import {
   ATTRIBUTE_META,
@@ -16,6 +16,7 @@ import { formatNumber, formatPrice } from "@/lib/format";
 import { useToast } from "@/providers/ToastProvider";
 import type { Brand } from "@/types";
 import { Field, FieldErrorsContext, inputClass, Section, TextAreaField, TextField, Toggle } from "./fields";
+import { ImagesEditor } from "./ImagesEditor";
 import { SpecsEditor } from "./SpecsEditor";
 import { VariantsEditor } from "./VariantsEditor";
 
@@ -33,8 +34,6 @@ interface ProductFormProps {
   categories: CategoryOption[];
   /** Baza ulanmagan bo‘lsa saqlash o‘chiriladi. */
   canSave: boolean;
-  /** Tahrirlashda: mavjud rasmlar (3-qismda yuklash qo‘shiladi). */
-  images?: string[];
 }
 
 /** «O‘zgarish bormi?» solishtiruvi uchun: versiya va React kalitlari hisobga olinmaydi. */
@@ -42,7 +41,7 @@ function snapshot(values: ProductFormValues): string {
   return JSON.stringify(values, (key, value: unknown) => (key === "updatedAt" || key === "key" ? undefined : value));
 }
 
-export function ProductForm({ mode, initialValues, brands, categories, canSave, images = [] }: ProductFormProps) {
+export function ProductForm({ mode, initialValues, brands, categories, canSave }: ProductFormProps) {
   const router = useRouter();
   const toast = useToast();
   const [values, setValues] = useState(initialValues);
@@ -51,6 +50,11 @@ export function ProductForm({ mode, initialValues, brands, categories, canSave, 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<{ message: string; conflict?: boolean } | null>(null);
   const [pending, startTransition] = useTransition();
+  const [uploading, setUploading] = useState(false);
+  const setImages = useCallback(
+    (update: (images: string[]) => string[]) => setValues((current) => ({ ...current, images: update(current.images) })),
+    [],
+  );
   const formRef = useRef<HTMLFormElement>(null);
 
   const dirty = snapshot(values) !== saved;
@@ -91,6 +95,10 @@ export function ProductForm({ mode, initialValues, brands, categories, canSave, 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!canSave || pending) return;
+    if (uploading) {
+      setFormError({ message: "Rasmlar hali yuklanmoqda — tugashini kuting, so‘ng saqlang." });
+      return;
+    }
     setFormError(null);
     const target: SaveProductTarget = mode === "create" ? { kind: "create" } : { kind: "update", id: initialValues.slug };
 
@@ -227,6 +235,8 @@ export function ProductForm({ mode, initialValues, brands, categories, canSave, 
               </div>
             </Section>
 
+            <ImagesEditor images={values.images} onChange={setImages} canUpload={canSave} onBusyChange={setUploading} />
+
             <VariantsEditor variants={values.variants} onChange={(variants) => set("variants", variants)} showRam={showRam} />
 
             {attributeKeys.length > 0 && (
@@ -310,7 +320,7 @@ export function ProductForm({ mode, initialValues, brands, categories, canSave, 
                 disabled={!canSave || pending || (!dirty && mode === "edit")}
                 className="mt-4 hidden h-12 w-full items-center justify-center gap-2 rounded-full bg-ink text-sm font-semibold text-white transition-colors hover:bg-black disabled:opacity-40 xl:inline-flex"
               >
-                {pending ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
+                {pending || uploading ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
                 {mode === "create" ? "Mahsulotni qo‘shish" : dirty ? "O‘zgarishlarni saqlash" : "Saqlangan"}
               </button>
               {mode === "edit" && values.isPublished && (
@@ -320,23 +330,6 @@ export function ProductForm({ mode, initialValues, brands, categories, canSave, 
               )}
             </Section>
 
-            <Section title="Rasmlar">
-              {images.length > 0 ? (
-                <ul className="grid grid-cols-3 gap-2">
-                  {images.map((src) => (
-                    <li key={src} className="aspect-square overflow-hidden rounded-xl bg-page-2">
-                      {/* eslint-disable-next-line @next/next/no-img-element -- admin oldindan ko‘rish, optimallashtirish shart emas */}
-                      <img src={src} alt="" className="size-full object-contain" />
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="flex items-center gap-3 rounded-xl border border-dashed border-line p-4 text-sm text-ink-muted">
-                  <ImageIcon className="size-5 shrink-0" aria-hidden="true" />
-                  Rasm yuklash keyingi yangilanishda qo‘shiladi. Hozircha saytda chiroyli illyustratsiya ko‘rsatiladi.
-                </div>
-              )}
-            </Section>
           </aside>
         </div>
 
@@ -344,7 +337,7 @@ export function ProductForm({ mode, initialValues, brands, categories, canSave, 
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur xl:hidden">
           <div className="mx-auto flex max-w-3xl items-center gap-3">
             <p className="min-w-0 flex-1 truncate text-xs text-ink-muted">
-              {pending ? "Saqlanmoqda…" : dirty ? "Saqlanmagan o‘zgarishlar bor" : mode === "edit" ? "Hammasi saqlangan" : "Ma’lumotlarni to‘ldiring"}
+              {pending ? "Saqlanmoqda…" : uploading ? "Rasmlar yuklanmoqda…" : dirty ? "Saqlanmagan o‘zgarishlar bor" : mode === "edit" ? "Hammasi saqlangan" : "Ma’lumotlarni to‘ldiring"}
             </p>
             <Link href="/admin/mahsulotlar" className="rounded-full px-4 py-2.5 text-sm font-medium text-ink-muted hover:text-ink">
               Orqaga
@@ -354,7 +347,7 @@ export function ProductForm({ mode, initialValues, brands, categories, canSave, 
               disabled={!canSave || pending || (!dirty && mode === "edit")}
               className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-white disabled:opacity-40"
             >
-              {pending ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
+              {pending || uploading ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
               {mode === "create" ? "Qo‘shish" : "Saqlash"}
             </button>
           </div>

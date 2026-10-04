@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { CircleAlert, CircleCheck, CircleDashed, type LucideIcon } from "lucide-react";
 import { getServerEnv } from "@/config/env";
+import { checkImageBucket } from "@/lib/db/storage";
 import { checkDbHealth } from "@/lib/db/supabase";
 import { countOrders } from "@/lib/repo/orders";
 import { countByStatus, toAdminRow } from "@/lib/admin/product-list";
@@ -40,7 +41,12 @@ function StatCard({ label, value, href, tone }: { label: string; value: string; 
 export default async function AdminDashboardPage() {
   // Har doim so‘rov vaqtida yangi ma’lumot: build paytida bazaga murojaat qilinmaydi.
   await connection();
-  const [products, orderCount, db] = await Promise.all([getAllProductsForAdmin(), countOrders(), checkDbHealth()]);
+  const [products, orderCount, db, imageBucket] = await Promise.all([
+    getAllProductsForAdmin(),
+    countOrders(),
+    checkDbHealth(),
+    checkImageBucket(),
+  ]);
   const productCounts = countByStatus(products.map(toAdminRow));
   const env = getServerEnv();
 
@@ -64,6 +70,16 @@ export default async function AdminDashboardPage() {
       ok: db.state === "ok",
       error: db.state === "error",
       text: dbText,
+    },
+    {
+      label: "Rasmlar papkasi",
+      ok: imageBucket,
+      error: db.state === "ok" && !imageBucket,
+      text: imageBucket
+        ? "Admin paneldan rasm yuklash mumkin"
+        : db.state === "ok"
+          ? "Topilmadi — Supabase SQL Editor’da 0003_product_images.sql ni ishga tushiring"
+          : "Supabase ulangandan keyin ishlaydi",
     },
   ];
 

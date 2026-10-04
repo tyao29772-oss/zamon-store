@@ -1241,6 +1241,39 @@ async function main(): Promise<void> {
     assert.equal(built.attributes.capacity, powerbank.attributes.capacity);
   });
 
+  await check("rasmlar: tartib saqlanadi, takror olib tashlanadi, 10 tadan ortig‘i rad etiladi", () => {
+    const product = allProducts[0]!;
+    const values = productToFormValues(product);
+    values.images = ["/products/a/2.webp", "/products/a/1.webp", "/products/a/2.webp"];
+    const built = buildProductFromInput(productInputSchema.parse(values), product, product.updatedAt);
+    assert.deepEqual(built.images, ["/products/a/2.webp", "/products/a/1.webp"]);
+    values.images = Array.from({ length: 11 }, (_, i) => `/products/a/${i}.webp`);
+    const result = productInputSchema.safeParse(values);
+    assert.ok(!result.success && flattenIssues(result.error.issues).images?.includes("10"));
+  });
+
+  await check("rasm manzili: faqat o‘z Storage papkamizdagi yuklangan fayl qabul qilinadi", async () => {
+    const saved = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SECRET_KEY };
+    process.env.SUPABASE_URL = "https://abcdef.supabase.co";
+    process.env.SUPABASE_SECRET_KEY = "sb_secret_test";
+    try {
+      const { isOwnUploadedImage } = await import("@/lib/db/storage");
+      const base = "https://abcdef.supabase.co/storage/v1/object/public/product-images/";
+      const uuid = "123e4567-e89b-12d3-a456-426614174000";
+      assert.equal(isOwnUploadedImage(`${base}uploads/2026/10/${uuid}.webp`), true);
+      assert.equal(isOwnUploadedImage(`${base}uploads/2026/10/${uuid}.webp?x=1`), false, "query");
+      assert.equal(isOwnUploadedImage(`${base}uploads/../../secret.webp`), false, "yo‘l chiqishi");
+      assert.equal(isOwnUploadedImage(`https://boshqa.supabase.co/storage/v1/object/public/product-images/uploads/2026/10/${uuid}.webp`), false, "begona loyiha");
+      assert.equal(isOwnUploadedImage(`https://evil.com/${uuid}.webp`), false, "begona sayt");
+      assert.equal(isOwnUploadedImage(`${base}uploads/2026/10/${uuid}.svg`), false, "svg");
+    } finally {
+      if (saved.url === undefined) delete process.env.SUPABASE_URL;
+      else process.env.SUPABASE_URL = saved.url;
+      if (saved.key === undefined) delete process.env.SUPABASE_SECRET_KEY;
+      else process.env.SUPABASE_SECRET_KEY = saved.key;
+    }
+  });
+
   await check("kategoriya tanlovi: faqat barglar, to‘liq yo‘l bilan", () => {
     const options = getCategoryOptions();
     assert.equal(options.length, 25);

@@ -44,7 +44,6 @@ export default async function EditProductPage({ params }: PageProps<"/admin/mahs
         brands={brands}
         categories={getCategoryOptions()}
         canSave={isDbConfigured()}
-        images={product.images}
       />
     </div>
   );

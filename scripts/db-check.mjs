@@ -67,4 +67,18 @@ for (const table of ["orders", "events", "products"]) {
   }
 }
 
+try {
+  const response = await fetch(`${url}/storage/v1/bucket/product-images`, { headers, signal: AbortSignal.timeout(10_000) });
+  if (response.ok) {
+    const bucket = await response.json();
+    const mb = bucket.file_size_limit ? `${Math.round(bucket.file_size_limit / 1024 / 1024)} MB` : "cheklovsiz";
+    console.log(`  ✓ «product-images» rasm papkasi bor (${bucket.public ? "ochiq o‘qish" : "YOPIQ ✗"}, ${mb})`);
+    if (!bucket.public) fail("Rasm papkasi ochiq (public) bo‘lishi kerak — 0003_product_images.sql ni qayta ishga tushiring.");
+  } else {
+    fail("«product-images» rasm papkasi topilmadi. supabase/migrations/0003_product_images.sql ni SQL Editor'da ishga tushiring.");
+  }
+} catch (error) {
+  fail(`Storage'ga ulanib bo‘lmadi: ${error instanceof Error ? error.message : error}`);
+}
+
 console.log(process.exitCode ? "\nBaza hali tayyor emas." : "\nBaza tayyor — sayt Supabase bilan ishlaydi.");

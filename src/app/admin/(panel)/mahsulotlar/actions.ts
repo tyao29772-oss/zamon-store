@@ -1,9 +1,12 @@
 "use server";
 
 import { updateTag } from "next/cache";
+import { headers } from "next/headers";
 import { buildProductFromInput, flattenIssues, productInputSchema } from "@/lib/admin/product-form";
 import { requireAdmin } from "@/lib/admin/auth";
-import { isDbConfigured } from "@/lib/db/supabase";
+import { createSignedImageUpload, IMAGE_TYPES, isOwnUploadedImage, type ImageContentType } from "@/lib/db/storage";
+import { DbError, isDbConfigured } from "@/lib/db/supabase";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { productSchema } from "@/lib/repo/product-rows";
 import { PRODUCTS_TAG } from "@/lib/repo/products";
 import {
@@ -20,6 +23,41 @@ export type SaveProductTarget = { kind: "create" } | { kind: "update"; id: strin
 export type SaveProductResult =
   | { ok: true; id: string; updatedAt: string; created: boolean }
   | { ok: false; error: string; fieldErrors?: Record<string, string>; conflict?: boolean };
+
+export type ImageUploadResult =
+  | { ok: true; uploadUrl: string; publicUrl: string }
+  | { ok: false; error: string };
+
+const UPLOAD_LIMIT = 120;
+const UPLOAD_WINDOW_MS = 10 * 60_000;
+
+/**
+ * Bitta rasm uchun bir martalik yuklash havolasi. Brauzer siqilgan rasmni shu havolaga
+ * to‘g‘ridan-to‘g‘ri yuklaydi (Netlify orqali o‘tmaydi — tez va hajm cheklovisiz).
+ */
+export async function createImageUploadAction(contentType: string): Promise<ImageUploadResult> {
+  await requireAdmin();
+  if (!isDbConfigured()) return { ok: false, error: "Baza (Supabase) ulanmagan — rasm yuklab bo‘lmaydi." };
+  if (!Object.hasOwn(IMAGE_TYPES, contentType)) return { ok: false, error: "Faqat rasm (JPG, PNG, WebP) yuklash mumkin." };
+
+  const rate = checkRateLimit(`admin-upload:${getClientIp(await headers())}`, UPLOAD_LIMIT, UPLOAD_WINDOW_MS);
+  if (!rate.allowed) return { ok: false, error: "Juda ko‘p rasm yuklandi. Bir necha daqiqadan so‘ng davom eting." };
+
+  try {
+    const signed = await createSignedImageUpload(contentType as ImageContentType);
+    return { ok: true, ...signed };
+  } catch (error) {
+    console.error("[admin/products] yuklash havolasi:", error);
+    const status = error instanceof DbError ? error.status : undefined;
+    return {
+      ok: false,
+      error:
+        status === 404 || status === 400
+          ? "Rasmlar papkasi topilmadi — Supabase'da 0003_product_images.sql ishga tushirilmagan."
+          : "Rasm yuklashni boshlab bo‘lmadi. Internetni tekshirib, qayta urinib ko‘ring.",
+    };
+  }
+}
 
 export async function saveProductAction(target: SaveProductTarget, values: unknown): Promise<SaveProductResult> {
   await requireAdmin();
@@ -44,6 +82,14 @@ export async function saveProductAction(target: SaveProductTarget, values: unkno
     }
     if (target.kind === "update" && !parsed.data.updatedAt) {
       return { ok: false, error: "Forma versiyasi yo‘q. Sahifani yangilab, qayta urinib ko‘ring." };
+    }
+
+    // Rasm faqat shu mahsulotda avval bor bo‘lgan yoki o‘z papkamizga yuklangan bo‘lishi mumkin —
+    // begona saytdagi rasm manzilini qo‘yib bo‘lmaydi.
+    const knownImages = new Set(existing?.images ?? []);
+    const foreign = parsed.data.images.filter((url) => !knownImages.has(url) && !isOwnUploadedImage(url));
+    if (foreign.length > 0) {
+      return { ok: false, error: "Rasmlardan biri noma’lum manzildan. Uni o‘chirib, qayta yuklang.", fieldErrors: { images: "Noma’lum rasm manzili" } };
     }
 
     const product = buildProductFromInput(parsed.data, existing, new Date().toISOString());
