@@ -3,23 +3,23 @@ import type { ReactNode } from "react";
 import { ExternalLink, LogOut } from "lucide-react";
 import { logoutAction } from "@/app/admin/actions";
 import { AdminNav } from "@/components/admin/AdminNav";
-import { LogoMark } from "@/components/brand/Logo";
-import { siteConfig } from "@/config/site";
+import { LogoMark } from "@/components/brand/LogoMark";
+import { getStore } from "@/lib/repo/store";
 import { requireAdmin } from "@/lib/admin/auth";
 import { countNewOrders } from "@/lib/repo/orders";
 
 export default async function AdminPanelLayout({ children }: { children: ReactNode }) {
   await requireAdmin();
-  const newOrders = await countNewOrders();
+  const [newOrders, store] = await Promise.all([countNewOrders(), getStore()]);
 
   return (
     <div className="lg:grid lg:min-h-dvh lg:grid-cols-[248px_1fr]">
       <aside className="bg-dark px-4 py-4 text-white lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:py-6">
         <div className="flex items-center justify-between gap-3 lg:mb-8 lg:px-2">
           <Link href="/admin" className="flex items-center gap-2.5">
-            <LogoMark size={36} />
+            <LogoMark size={36} letter={store.wordmark} />
             <span className="leading-tight">
-              <span className="block text-sm font-semibold">{siteConfig.name}</span>
+              <span className="block text-sm font-semibold">{store.name}</span>
               <span className="block text-xs text-white/50">Admin panel</span>
             </span>
           </Link>

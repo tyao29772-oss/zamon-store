@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { LockKeyhole } from "lucide-react";
-import { LogoMark } from "@/components/brand/Logo";
+import { LogoMark } from "@/components/brand/LogoMark";
 import { LoginForm } from "@/components/admin/LoginForm";
 import { getAdminEnv } from "@/config/env";
-import { siteConfig } from "@/config/site";
+import { getStore } from "@/lib/repo/store";
 import { safeAdminRedirect } from "@/lib/admin/session";
 
 export const metadata: Metadata = { title: "Kirish" };
@@ -11,15 +11,16 @@ export const metadata: Metadata = { title: "Kirish" };
 export default async function AdminLoginPage({ searchParams }: PageProps<"/admin/login">) {
   const { next } = await searchParams;
   const { enabled } = getAdminEnv();
+  const store = await getStore();
 
   return (
     <main id="main" className="grid min-h-dvh place-items-center px-4 py-10">
       <div className="w-full max-w-sm rounded-[var(--radius-card)] border border-line bg-surface p-7 shadow-[var(--shadow-card)]">
         <div className="flex items-center gap-3">
-          <LogoMark size={44} />
+          <LogoMark size={44} letter={store.wordmark} />
           <div>
             <h1 className="text-lg font-semibold text-ink">Admin panel</h1>
-            <p className="text-sm text-ink-muted">{siteConfig.name}</p>
+            <p className="text-sm text-ink-muted">{store.name}</p>
           </div>
         </div>
 

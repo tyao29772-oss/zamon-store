@@ -10,12 +10,14 @@ export interface OrderMessageInput {
   variantText: string | null;
   price: Money;
   productUrl: string;
+  /** Do‘kon nomi (admin «Sozlamalar»idan). Berilmasa — standart nom. */
+  storeName?: string;
 }
 
 /** Mijoz Telegram’da yuboradigan tayyor xabar. */
 export function buildOrderMessage(input: OrderMessageInput): string {
   const lines = [
-    `Assalomu alaykum. Men ${siteConfig.name} saytidan quyidagi mahsulotga qiziqyapman:`,
+    `Assalomu alaykum. Men ${input.storeName || siteConfig.name} saytidan quyidagi mahsulotga qiziqyapman:`,
     "",
   ];
 

@@ -8,11 +8,14 @@ import { getStore } from "@/lib/repo/store";
 
 const BASE_PATH = "/yetkazib-berish";
 
-export const metadata: Metadata = {
-  title: "Yetkazib berish shartlari",
-  description: "Zamon Store'da yetkazib berish qanday ishlaydi, narxlar va muddatlar.",
-  alternates: { canonical: BASE_PATH },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { name } = await getStore();
+  return {
+    title: "Yetkazib berish shartlari",
+    description: `${name}'da yetkazib berish qanday ishlaydi, narxlar va muddatlar.`,
+    alternates: { canonical: BASE_PATH },
+  };
+}
 
 export default async function DeliveryPage() {
   const store = await getStore();

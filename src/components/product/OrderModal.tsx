@@ -27,7 +27,7 @@ type Step = "form" | "success";
  * (ProductView'da), shuning uchun har ochilishda holat toza boshlanadi.
  */
 export function OrderModal({ product, variant, onClose }: OrderModalProps) {
-  const { telegramUsername } = useStoreContact();
+  const { telegramUsername, storeName } = useStoreContact();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const { show } = useToast();
@@ -111,6 +111,7 @@ export function OrderModal({ product, variant, onClose }: OrderModalProps) {
           variantText,
           price: variant.price,
           productUrl: absoluteUrl(productHref(product.slug, variant.id)),
+          storeName,
         }),
       );
       // Avtomatik ochishga urinish — ba’zi brauzerlar pop-up sifatida bloklashi mumkin,
@@ -133,6 +134,7 @@ export function OrderModal({ product, variant, onClose }: OrderModalProps) {
             variantText,
             price: variant.price,
             productUrl: absoluteUrl(productHref(product.slug, variant.id)),
+            storeName,
           }),
         )
       : null;

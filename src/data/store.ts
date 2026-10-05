@@ -9,6 +9,8 @@ import type { Store } from "@/types";
 export const store: Store = {
   id: "store-1",
   name: siteConfig.name,
+  wordmark: siteConfig.wordmark,
+  tagline: siteConfig.tagline,
   slug: "zamon-store",
   description:
     "Zamon Store — Toshkentdagi telefon, noutbuk va aksessuarlar do‘koni. Original va tekshirilgan mahsulotlar, kafolat hamda tezkor javob.",

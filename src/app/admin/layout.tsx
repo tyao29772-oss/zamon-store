@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { siteConfig } from "@/config/site";
+import { getStore } from "@/lib/repo/store";
 
-export const metadata: Metadata = {
-  title: {
-    default: `Admin panel | ${siteConfig.name}`,
-    template: `%s | Admin · ${siteConfig.name}`,
-  },
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { name } = await getStore();
+  return {
+    title: { default: `Admin panel | ${name}`, template: `%s | Admin · ${name}` },
+    robots: { index: false, follow: false },
+  };
+}
 
 export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   return <div className="min-h-dvh bg-page">{children}</div>;

@@ -6,9 +6,13 @@ import { AlertTriangle, ExternalLink, LoaderCircle, Plus, Save, X } from "lucide
 import { saveSettingsAction } from "@/app/admin/(panel)/sozlamalar/actions";
 import { paragraphsToText, textToParagraphs, type StoreSettings } from "@/lib/settings/store-settings";
 import { useToast } from "@/providers/ToastProvider";
+import { LogoMark } from "@/components/brand/LogoMark";
 import { FieldErrorsContext, inputClass, MoneyField, Section, TextAreaField, TextField } from "./product-form/fields";
 
 interface FormState {
+  name: string;
+  wordmark: string;
+  tagline: string;
   phone: string;
   telegramUsername: string;
   instagramUrl: string;
@@ -26,6 +30,9 @@ interface FormState {
 
 function toForm(s: StoreSettings): FormState {
   return {
+    name: s.name,
+    wordmark: s.wordmark,
+    tagline: s.tagline,
     phone: s.phone,
     telegramUsername: s.telegramUsername,
     instagramUrl: s.instagramUrl,
@@ -85,6 +92,22 @@ export function SettingsForm({ initial, canSave }: { initial: StoreSettings; can
 
   const telegram = form.telegramUsername.trim().replace(/^@/, "");
 
+  // Nom o‘zgartirilgan, lekin matnlarda eski nom qolgan bo‘lsa — qaysi joylarni yangilashni aytamiz.
+  const oldName = initial.name.trim();
+  const TEXT_FIELDS: [keyof FormState, string][] = [
+    ["description", "Qisqa tavsif"],
+    ["aboutLong", "Do‘kon haqida"],
+    ["warrantyPolicy", "Kafolat"],
+    ["returnPolicy", "Qaytarish"],
+    ["deliveryPolicy", "Yetkazib berish"],
+    ["privacyPolicy", "Maxfiylik"],
+    ["tagline", "Shior"],
+  ];
+  const staleNameIn =
+    oldName && form.name.trim() && form.name.trim().toLowerCase() !== oldName.toLowerCase()
+      ? TEXT_FIELDS.filter(([key]) => String(form[key]).toLowerCase().includes(oldName.toLowerCase())).map(([, label]) => label)
+      : [];
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSave || pending) return;
@@ -130,11 +153,59 @@ export function SettingsForm({ initial, canSave }: { initial: StoreSettings; can
         </div>
 
         {!canSave && <p className="rounded-2xl bg-warn-soft p-4 text-sm text-warn">Baza (Supabase) ulanmagan — sozlamalarni saqlab bo‘lmaydi.</p>}
+        {staleNameIn.length > 0 && (
+          <p role="status" className="flex items-start gap-2 rounded-2xl border border-warn/30 bg-warn-soft p-4 text-sm text-warn">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <span>
+              Nom «{form.name.trim()}» ga o‘zgardi, lekin bu matnlarda hali eski nom «{oldName}» qolgan: <b>{staleNameIn.join(", ")}</b>. Ularni
+              pastdagi «Matnlar» bo‘limida yangilang — aks holda saytda eski nom ko‘rinadi.
+            </span>
+          </p>
+        )}
         {formError && (
           <p role="alert" className="flex items-start gap-2 rounded-2xl border border-sale/30 bg-sale-soft p-4 text-sm text-sale">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> {formError}
           </p>
         )}
+
+        <Section title="Do‘kon nomi va logotip" description="Saytning har bir sahifasida, Google'da va brauzer sarlavhasida ko‘rinadi.">
+          <div className="grid gap-4 md:grid-cols-2">
+            <TextField label="Do‘kon nomi" path="name" value={form.name} onChange={(v) => set("name", v)} required placeholder="Zamon Store" maxLength={40} />
+            <TextField
+              label="Logotip yozuvi (katta harflarda)"
+              path="wordmark"
+              value={form.wordmark}
+              onChange={(v) => set("wordmark", v.toUpperCase())}
+              required
+              placeholder="ZAMON"
+              hint="Qisqa bo‘lsin (12 belgigacha). Belgidagi harf — birinchi harf."
+              maxLength={12}
+            />
+            <TextField
+              label="Shior"
+              path="tagline"
+              value={form.tagline}
+              onChange={(v) => set("tagline", v)}
+              required
+              placeholder="Telefon, noutbuk va aksessuarlar — Toshkentda"
+              maxLength={80}
+              className="md:col-span-2"
+            />
+          </div>
+          {/* Jonli ko‘rinish — saqlashdan oldin logotip qanday chiqishini ko‘rsatadi */}
+          <div className="mt-4 flex flex-wrap items-center gap-6 rounded-2xl bg-page-2/70 p-4" aria-label="Logotip ko‘rinishi">
+            <span className="flex items-center gap-2.5">
+              <LogoMark size={40} letter={form.wordmark || "Z"} />
+              <span className="flex flex-col leading-none">
+                <span className={`font-bold text-ink ${form.wordmark.length > 7 ? "text-[15px] tracking-[0.08em]" : "text-[19px] tracking-[0.16em]"}`}>{form.wordmark || "—"}</span>
+                <span className="mt-1 text-[9px] font-medium uppercase tracking-[0.34em] text-ink-muted">store</span>
+              </span>
+            </span>
+            <span className="min-w-0 text-xs text-ink-muted">
+              Brauzer sarlavhasi: <b className="text-ink">{form.name || "…"} — {form.tagline || "…"}</b>
+            </span>
+          </div>
+        </Section>
 
         <Section title="Aloqa" description="Saytdagi «Telegram orqali buyurtma» tugmasi, footer va «Aloqa» sahifasida ko‘rinadi.">
           <div className="grid gap-4 md:grid-cols-2">

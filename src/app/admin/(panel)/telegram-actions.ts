@@ -4,6 +4,8 @@ import { headers } from "next/headers";
 import { requireAdmin } from "@/lib/admin/auth";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { sendAdminTelegram } from "@/lib/telegram-bot";
+import { getStore } from "@/lib/repo/store";
+import { escapeTelegramHtml } from "@/lib/telegram";
 
 /** Dashboard'dagi «Sinov xabarini yuborish»: bot va chat ID to‘g‘ri sozlanganini tekshiradi. */
 export async function sendTestTelegramAction(): Promise<{ ok: boolean; message: string }> {
@@ -12,7 +14,7 @@ export async function sendTestTelegramAction(): Promise<{ ok: boolean; message: 
   if (!rate.allowed) return { ok: false, message: "Juda tez-tez. Bir daqiqadan so‘ng qayta urinib ko‘ring." };
 
   const result = await sendAdminTelegram({
-    text: "✅ <b>Zamon Store</b>: bot to‘g‘ri sozlangan.\nYangi buyurtmalar shu chatga keladi.",
+    text: `✅ <b>${escapeTelegramHtml((await getStore()).name)}</b>: bot to‘g‘ri sozlangan.\nYangi buyurtmalar shu chatga keladi.`,
     buttons: [],
   });
   if (result.ok) {

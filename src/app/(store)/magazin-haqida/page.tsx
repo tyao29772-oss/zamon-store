@@ -11,11 +11,14 @@ import { getStore } from "@/lib/repo/store";
 
 const BASE_PATH = "/magazin-haqida";
 
-export const metadata: Metadata = {
-  title: "Magazin haqida",
-  description: "Zamon Store haqida: qachon ochilgan, nima sotamiz va nega bizga ishonish mumkin.",
-  alternates: { canonical: BASE_PATH },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { name } = await getStore();
+  return {
+    title: "Magazin haqida",
+    description: `${name} haqida: qachon ochilgan, nima sotamiz va nega bizga ishonish mumkin.`,
+    alternates: { canonical: BASE_PATH },
+  };
+}
 
 export default async function AboutPage() {
   const [store, products, categories] = await Promise.all([getStore(), getAllProducts(), getCategories()]);

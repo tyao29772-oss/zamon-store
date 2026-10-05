@@ -7,11 +7,14 @@ import { getStore } from "@/lib/repo/store";
 
 const BASE_PATH = "/maxfiylik";
 
-export const metadata: Metadata = {
-  title: "Maxfiylik siyosati",
-  description: "Zamon Store qanday ma’lumot yig‘adi, qanday ishlatadi va kim bilan ulashadi.",
-  alternates: { canonical: BASE_PATH },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { name } = await getStore();
+  return {
+    title: "Maxfiylik siyosati",
+    description: `${name} qanday ma’lumot yig‘adi, qanday ishlatadi va kim bilan ulashadi.`,
+    alternates: { canonical: BASE_PATH },
+  };
+}
 
 export default async function PrivacyPage() {
   const store = await getStore();

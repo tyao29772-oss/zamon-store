@@ -14,6 +14,10 @@ export interface WorkingHours {
 export interface Store {
   id: string;
   name: string;
+  /** Logotipdagi qisqa yozuv (katta harflar): `ZAMON`. */
+  wordmark: string;
+  /** Bosh sahifa sarlavhasidagi shior. */
+  tagline: string;
   slug: string;
   logo?: string;
   description: string;

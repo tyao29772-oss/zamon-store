@@ -1422,6 +1422,20 @@ async function main(): Promise<void> {
     assert.deepEqual(mergeStoreSettings(store, null), store);
   });
 
+  await check("sozlamalar: do‘kon nomi, logotip yozuvi (katta harf, o‘/g‘) va shior", () => {
+    const base = pickStoreSettings(store);
+    const parse = (patch: Partial<typeof base>) => storeSettingsSchema.safeParse({ ...base, ...patch });
+    const a = parse({ wordmark: "  mobile   house " });
+    assert.ok(a.success && a.data.wordmark === "MOBILE HOUSE");
+    const b = parse({ wordmark: "bo‘ston" });
+    assert.ok(b.success && b.data.wordmark === "BO‘STON", "o‘ apostrofi");
+    assert.equal(parse({ wordmark: "ТЕЛЕФОН" }).success, false, "kirill — logotip shrifti uchun emas");
+    assert.equal(parse({ wordmark: "JUDA-UZUN-YOZUV" }).success, false, "12 belgidan uzun");
+    assert.equal(parse({ name: "X" }).success, false);
+    assert.equal(parse({ tagline: "" }).success, false);
+    assert.equal(mergeStoreSettings(store, { name: "Mobile House" }).name, "Mobile House");
+  });
+
   await check("sozlamalar: matn ↔ xatboshilar", () => {
     assert.deepEqual(textToParagraphs("Birinchi\nqator davomi\n\n\nIkkinchi  \n\n  "), ["Birinchi qator davomi", "Ikkinchi"]);
     assert.equal(paragraphsToText(["A", "B"]), "A\n\nB");

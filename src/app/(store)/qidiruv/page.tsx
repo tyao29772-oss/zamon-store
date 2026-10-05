@@ -13,6 +13,7 @@ import { getBrands } from "@/lib/repo/brands";
 import { getPopularProducts } from "@/lib/repo/products";
 import { searchProducts } from "@/lib/repo/search";
 import { searchHref } from "@/lib/urls";
+import { getStore } from "@/lib/repo/store";
 
 function firstValue(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : value) ?? "";
@@ -22,9 +23,10 @@ export async function generateMetadata({
   searchParams,
 }: PageProps<"/qidiruv">): Promise<Metadata> {
   const q = firstValue((await searchParams).q).trim();
+  const { name } = await getStore();
   return {
     title: q ? `«${q}» bo‘yicha qidiruv` : "Qidiruv",
-    description: "Zamon Store katalogi bo‘ylab qidiring: telefon, noutbuk va aksessuarlar.",
+    description: `${name} katalogi bo‘ylab qidiring: telefon, noutbuk va aksessuarlar.`,
     robots: { index: false },
   };
 }

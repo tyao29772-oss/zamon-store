@@ -9,6 +9,9 @@ import type { Store } from "@/types";
  */
 
 export const EDITABLE_STORE_KEYS = [
+  "name",
+  "wordmark",
+  "tagline",
   "phone",
   "telegramUsername",
   "instagramUrl",
@@ -33,6 +36,21 @@ const paragraphs = (label: string) =>
     .max(20, `${label}: ko‘pi bilan 20 ta xatboshi`);
 
 export const storeSettingsSchema = z.object({
+  name: z.string().trim().min(2, "Do‘kon nomini yozing (kamida 2 belgi)").max(40, "Nom ko‘pi bilan 40 belgi"),
+  // Logotipdagi qisqa yozuv: katta harflarda, lotin harf/raqam/bo‘shliq.
+  wordmark: z
+    .string()
+    .trim()
+    .transform((v) => v.toUpperCase().replace(/\s+/g, " "))
+    .pipe(
+      z
+        .string()
+        .min(1, "Logotip yozuvini kiriting")
+        .max(12, "Logotip yozuvi ko‘pi bilan 12 belgi")
+        // O‘zbekcha O‘/G‘ apostroflari (‘ ʻ ’ ') ham ruxsat etiladi.
+        .regex(/^[A-Z0-9][A-Z0-9 &'’‘ʻ.-]*$/, "Faqat lotin harflari, raqam, bo‘shliq va & ' . -"),
+    ),
+  tagline: z.string().trim().min(3, "Shiorni yozing").max(80, "Shior ko‘pi bilan 80 belgi"),
   phone: z
     .string()
     .trim()

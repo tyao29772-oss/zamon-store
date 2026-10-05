@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import { publicEnv } from "@/config/env";
 import { siteConfig } from "@/config/site";
+import { getStore } from "@/lib/repo/store";
 import { Providers } from "@/providers/Providers";
 import "./globals.css";
 
@@ -19,22 +20,26 @@ const cormorant = Cormorant_Garamond({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(publicEnv.siteUrl),
-  title: {
-    default: `${siteConfig.name} — ${siteConfig.tagline}`,
-    template: `%s | ${siteConfig.name}`,
-  },
-  description: siteConfig.description,
-  applicationName: siteConfig.name,
-  openGraph: {
-    type: "website",
-    locale: "uz_UZ",
-    siteName: siteConfig.name,
-    title: siteConfig.name,
-    description: siteConfig.description,
-  },
-};
+/** Nom, shior va tavsif admin «Sozlamalar»idan — do‘kon nomi o‘zgarsa, Google va brauzer sarlavhasi ham o‘zgaradi. */
+export async function generateMetadata(): Promise<Metadata> {
+  const store = await getStore();
+  return {
+    metadataBase: new URL(publicEnv.siteUrl),
+    title: {
+      default: `${store.name} — ${store.tagline}`,
+      template: `%s | ${store.name}`,
+    },
+    description: store.description,
+    applicationName: store.name,
+    openGraph: {
+      type: "website",
+      locale: "uz_UZ",
+      siteName: store.name,
+      title: store.name,
+      description: store.description,
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",

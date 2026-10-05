@@ -7,11 +7,14 @@ import { getStore } from "@/lib/repo/store";
 
 const BASE_PATH = "/kafolat";
 
-export const metadata: Metadata = {
-  title: "Kafolat shartlari",
-  description: "Zamon Store'da kafolat va qaytarish shartlari qanday ishlashi haqida to‘liq ma’lumot.",
-  alternates: { canonical: BASE_PATH },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { name } = await getStore();
+  return {
+    title: "Kafolat shartlari",
+    description: `${name}'da kafolat va qaytarish shartlari qanday ishlashi haqida to‘liq ma’lumot.`,
+    alternates: { canonical: BASE_PATH },
+  };
+}
 
 export default async function WarrantyPage() {
   const store = await getStore();

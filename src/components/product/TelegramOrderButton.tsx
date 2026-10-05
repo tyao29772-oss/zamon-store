@@ -39,7 +39,7 @@ export function TelegramOrderButton({
   label: labelProp,
   category,
 }: TelegramOrderButtonProps) {
-  const { telegramUsername } = useStoreContact();
+  const { telegramUsername, storeName } = useStoreContact();
   const outOfStock = getVariantStockStatus(variant) === "out_of_stock";
   const label = outOfStock ? "Xabar bering" : (labelProp ?? "Telegram orqali buyurtma berish");
 
@@ -48,6 +48,7 @@ export function TelegramOrderButton({
     variantText: describeVariantForOrder(product, variant),
     price: variant.price,
     productUrl: absoluteUrl(productHref(product.slug, variant.id)),
+    storeName,
   });
 
   return (

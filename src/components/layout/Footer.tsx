@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Clock, MapPin, Phone, Send } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
-import { siteConfig } from "@/config/site";
 import { formatUzPhone } from "@/lib/phone";
 import { getRootCategories } from "@/lib/repo/categories";
 import { getStore } from "@/lib/repo/store";
@@ -116,7 +115,7 @@ export async function Footer() {
       <div className="relative border-t border-dark-line">
         <div className="container-page flex flex-col gap-2 pb-[calc(96px+var(--sticky-bottom-bar))] pt-5 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between lg:pb-5">
           <p>
-            © {new Date().getFullYear()} {siteConfig.name}. Barcha huquqlar himoyalangan.
+            © {new Date().getFullYear()} {store.name}. Barcha huquqlar himoyalangan.
           </p>
           <p>Narxlar so‘mda. Mavjudlik Telegram orqali tasdiqlanadi.</p>
         </div>

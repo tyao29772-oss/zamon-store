@@ -10,11 +10,14 @@ import { getStore } from "@/lib/repo/store";
 
 const BASE_PATH = "/aloqa";
 
-export const metadata: Metadata = {
-  title: "Aloqa",
-  description: "Zamon Store bilan bog‘lanish: telefon, Telegram, Instagram va manzil.",
-  alternates: { canonical: BASE_PATH },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { name } = await getStore();
+  return {
+    title: "Aloqa",
+    description: `${name} bilan bog‘lanish: telefon, Telegram, Instagram va manzil.`,
+    alternates: { canonical: BASE_PATH },
+  };
+}
 
 export default async function ContactPage() {
   const store = await getStore();

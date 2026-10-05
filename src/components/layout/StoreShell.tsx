@@ -16,7 +16,7 @@ export async function StoreShell({ children }: { children: ReactNode }) {
   const [tree, store] = await Promise.all([getCategoryTree(), getStore()]);
 
   return (
-    <StoreContactProvider value={{ telegramUsername: store.telegramUsername }}>
+    <StoreContactProvider value={{ telegramUsername: store.telegramUsername, storeName: store.name }}>
       <a
         href="#main"
         className="fixed left-4 top-4 z-[100] -translate-y-24 rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white transition-transform focus:translate-y-0"
