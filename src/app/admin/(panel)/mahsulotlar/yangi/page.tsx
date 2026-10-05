@@ -7,11 +7,14 @@ import { duplicateFormValues, emptyFormValues, getCategoryOptions } from "@/lib/
 import { isDbConfigured } from "@/lib/db/supabase";
 import { getBrands } from "@/lib/repo/brands";
 import { getProductForAdmin } from "@/lib/repo/products-admin";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export const metadata: Metadata = { title: "Yangi mahsulot" };
 
 export default async function NewProductPage({ searchParams }: PageProps<"/admin/mahsulotlar/yangi">) {
   await connection();
+  // Layout ham tekshiradi, lekin sahifalar orasida yurganda layout qayta ishlamasligi mumkin — har sahifa o‘zi ham tekshiradi.
+  await requireAdmin();
   const { nusxa } = await searchParams;
   const [brands, source] = await Promise.all([
     getBrands(),

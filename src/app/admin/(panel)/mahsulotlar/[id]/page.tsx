@@ -10,6 +10,7 @@ import { isDbConfigured } from "@/lib/db/supabase";
 import { formatDate } from "@/lib/format";
 import { getBrands } from "@/lib/repo/brands";
 import { getProductForAdmin } from "@/lib/repo/products-admin";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export async function generateMetadata({ params }: PageProps<"/admin/mahsulotlar/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -19,6 +20,8 @@ export async function generateMetadata({ params }: PageProps<"/admin/mahsulotlar
 
 export default async function EditProductPage({ params, searchParams }: PageProps<"/admin/mahsulotlar/[id]">) {
   await connection();
+  // Layout ham tekshiradi, lekin sahifalar orasida yurganda layout qayta ishlamasligi mumkin — har sahifa o‘zi ham tekshiradi.
+  await requireAdmin();
   const { id } = await params;
   const { saqlandi } = await searchParams;
   const justSaved = saqlandi === "yangi" ? "created" : saqlandi === "1" ? "updated" : null;

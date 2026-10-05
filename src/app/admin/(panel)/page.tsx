@@ -10,6 +10,7 @@ import { countNewOrders, countOrders } from "@/lib/repo/orders";
 import { countByStatus, toAdminRow } from "@/lib/admin/product-list";
 import { formatNumber } from "@/lib/format";
 import { getAllProductsForAdmin } from "@/lib/repo/products";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -44,6 +45,8 @@ function StatCard({ label, value, href, tone }: { label: string; value: string; 
 export default async function AdminDashboardPage() {
   // Har doim so‘rov vaqtida yangi ma’lumot: build paytida bazaga murojaat qilinmaydi.
   await connection();
+  // Layout ham tekshiradi, lekin sahifalar orasida yurganda layout qayta ishlamasligi mumkin — har sahifa o‘zi ham tekshiradi.
+  await requireAdmin();
   const [products, orderCount, newOrders, db, imageBucket] = await Promise.all([
     getAllProductsForAdmin(),
     countOrders(),

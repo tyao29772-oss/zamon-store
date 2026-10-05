@@ -33,8 +33,28 @@ function supabaseImagePattern(): NonNullable<NonNullable<NextConfig["images"]>["
  */
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || process.env.URL?.trim() || "").replace(/\/+$/, "");
 
+/**
+ * Butun sayt uchun xavfsizlik sarlavhalari (admin sahifalar proxy'da yanada qattiqroq):
+ *  • begona sayt bizni iframe'ga joylab, buyurtma formasini aldab bostira olmasin;
+ *  • brauzer fayl turini «taxmin» qilmasin; har doim HTTPS;
+ *  • referrer'da to‘liq manzil (masalan, qidiruv so‘zi) begona saytga ketmasin;
+ *  • kerak bo‘lmagan qurilma ruxsatlari o‘chiq.
+ */
+const securityHeaders = [
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+];
+
 const nextConfig: NextConfig = {
   env: siteUrl ? { NEXT_PUBLIC_SITE_URL: siteUrl } : {},
+  poweredByHeader: false,
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
+  },
   images: {
     remotePatterns: supabaseImagePattern(),
   },

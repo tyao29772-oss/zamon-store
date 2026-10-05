@@ -4,11 +4,14 @@ import { SettingsForm } from "@/components/admin/SettingsForm";
 import { isDbConfigured } from "@/lib/db/supabase";
 import { getStoreForAdmin } from "@/lib/repo/store";
 import { pickStoreSettings } from "@/lib/settings/store-settings";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export const metadata: Metadata = { title: "Sozlamalar" };
 
 export default async function AdminSettingsPage() {
   await connection();
+  // Layout ham tekshiradi, lekin sahifalar orasida yurganda layout qayta ishlamasligi mumkin — har sahifa o‘zi ham tekshiradi.
+  await requireAdmin();
   const { store, customized } = await getStoreForAdmin();
 
   return (

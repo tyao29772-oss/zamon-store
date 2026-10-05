@@ -13,6 +13,7 @@ import { formatUzPhone } from "@/lib/phone";
 import { getOrderById } from "@/lib/repo/orders";
 import { getProductForAdmin } from "@/lib/repo/products-admin";
 import { productHref } from "@/lib/urls";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export async function generateMetadata({ params }: PageProps<"/admin/buyurtmalar/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -30,6 +31,8 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 export default async function AdminOrderPage({ params }: PageProps<"/admin/buyurtmalar/[id]">) {
   await connection();
+  // Layout ham tekshiradi, lekin sahifalar orasida yurganda layout qayta ishlamasligi mumkin — har sahifa o‘zi ham tekshiradi.
+  await requireAdmin();
   const { id } = await params;
   const order = await getOrderById(decodeURIComponent(id));
   if (!order) notFound();

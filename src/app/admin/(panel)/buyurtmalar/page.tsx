@@ -11,6 +11,7 @@ import { formatNumber, formatPrice } from "@/lib/format";
 import { formatUzPhone } from "@/lib/phone";
 import { listOrders } from "@/lib/repo/orders";
 import type { Order } from "@/types";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export const metadata: Metadata = { title: "Buyurtmalar" };
 
@@ -30,6 +31,8 @@ function hrefWith(params: Record<string, string | undefined>, changes: Record<st
 
 export default async function AdminOrdersPage({ searchParams }: PageProps<"/admin/buyurtmalar">) {
   await connection();
+  // Layout ham tekshiradi, lekin sahifalar orasida yurganda layout qayta ishlamasligi mumkin — har sahifa o‘zi ham tekshiradi.
+  await requireAdmin();
   const sp = await searchParams;
   const q = first(sp.q)?.trim().slice(0, 100) ?? "";
   const tab = parseOrderTab(first(sp.holat));

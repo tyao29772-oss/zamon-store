@@ -24,6 +24,7 @@ import { variantLabel } from "@/lib/admin/product-form";
 import { isDbConfigured } from "@/lib/db/supabase";
 import { productHref } from "@/lib/urls";
 import type { Product } from "@/types";
+import { requireAdmin } from "@/lib/admin/auth";
 
 function quickVariants(product: Product): QuickEditVariant[] {
   return product.variants.map((v) => ({
@@ -86,6 +87,8 @@ function VisibilityBadge({ published }: { published: boolean }) {
 
 export default async function AdminProductsPage({ searchParams }: PageProps<"/admin/mahsulotlar">) {
   await connection();
+  // Layout ham tekshiradi, lekin sahifalar orasida yurganda layout qayta ishlamasligi mumkin — har sahifa o‘zi ham tekshiradi.
+  await requireAdmin();
   const sp = await searchParams;
   const deletedName = first(sp.ochirildi)?.slice(0, 200);
   const canEdit = isDbConfigured();

@@ -16,6 +16,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_WINDOW_MS = 15 * 60_000;
+const FAILED_LOGIN_DELAY_MS = 1000;
 
 export interface LoginState {
   error: string | null;
@@ -35,6 +36,9 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
 
   const password = formData.get("password");
   if (typeof password !== "string" || !(await isAdminPassword(password))) {
+    // Har bir xato urinish ataylab sekinlashtiriladi — parolni avtomatik terib topish amalda imkonsiz
+    // (Netlify'da xotiradagi cheklov har server nusxasida alohida bo‘lgani uchun qo‘shimcha himoya).
+    await new Promise((resolve) => setTimeout(resolve, FAILED_LOGIN_DELAY_MS));
     return { error: "Parol noto‘g‘ri." };
   }
 
