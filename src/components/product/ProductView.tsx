@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminEditProductLink } from "@/components/admin/AdminShortcuts";
 import Link from "next/link";
 import { MapPin, Send, ShieldCheck, Star, Truck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -144,6 +145,7 @@ export function ProductView({ product, brand, categoryName, categoryHref, store,
         <h1 className="mt-2 font-display text-[32px] font-semibold leading-[1.08] tracking-tight text-ink md:text-[40px]">
           {product.name}
         </h1>
+        <AdminEditProductLink productId={product.id} />
 
         <div className="mt-2 flex items-center gap-1.5 text-sm text-ink-muted">
           <Star className="size-4 fill-[#e0a23a] text-[#e0a23a]" aria-hidden="true" />

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ADMIN_COOKIE, verifySessionToken } from "@/lib/admin/session";
+import { ADMIN_COOKIE, ADMIN_HINT_COOKIE, verifySessionToken } from "@/lib/admin/session";
 
 const LOGIN_PATH = "/admin/login";
 
@@ -22,6 +22,11 @@ export async function proxy(request: NextRequest) {
     response = NextResponse.redirect(new URL("/admin", request.url));
   } else {
     response = NextResponse.next();
+  }
+
+  // Sessiya tugagan bo‘lsa — saytdagi «Admin» tugmasi belgisi ham tozalanadi.
+  if (!authenticated && request.cookies.has(ADMIN_HINT_COOKIE)) {
+    response.cookies.delete({ name: ADMIN_HINT_COOKIE, path: "/" });
   }
 
   // Admin sahifalari qidiruv tizimlariga chiqmasin va keshlanmasin.

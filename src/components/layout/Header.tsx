@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Send } from "lucide-react";
+import { AdminHeaderLink } from "@/components/admin/AdminShortcuts";
 import { Logo } from "@/components/brand/Logo";
 import { CatalogTrigger } from "@/components/layout/CatalogTrigger";
 import { FavoritesLink } from "@/components/favorites/FavoritesLink";
@@ -38,6 +39,7 @@ export async function Header() {
         </nav>
 
         <div className="flex items-center gap-1">
+          <AdminHeaderLink />
           <SearchTrigger />
           <FavoritesLink className="hidden lg:inline-flex" />
           <a

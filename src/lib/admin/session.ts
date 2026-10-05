@@ -12,6 +12,7 @@ export const ADMIN_COOKIE = "zs_admin";
 /** Cookie faqat admin yo‘llariga yuboriladi. */
 export const ADMIN_COOKIE_PATH = "/admin";
 export const ADMIN_SESSION_MAX_AGE_S = 60 * 60 * 12;
+export { ADMIN_HINT_COOKIE } from "@/lib/admin/hint";
 
 interface SessionPayload {
   /** Tugash vaqti, Unix soniyalarda. */

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getAdminEnv } from "@/config/env";
 import {
   ADMIN_COOKIE,
+  ADMIN_HINT_COOKIE,
   ADMIN_COOKIE_PATH,
   ADMIN_SESSION_MAX_AGE_S,
   createSessionToken,
@@ -48,10 +49,21 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     maxAge: ADMIN_SESSION_MAX_AGE_S,
   });
 
+  // Saytda «Admin» tugmasini ko‘rsatish uchun belgi (ruxsat bermaydi).
+  (await cookies()).set(ADMIN_HINT_COOKIE, "1", {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: ADMIN_SESSION_MAX_AGE_S,
+  });
+
   redirect(safeAdminRedirect(formData.get("next")));
 }
 
 export async function logoutAction(): Promise<void> {
-  (await cookies()).delete({ name: ADMIN_COOKIE, path: ADMIN_COOKIE_PATH });
+  const store = await cookies();
+  store.delete({ name: ADMIN_COOKIE, path: ADMIN_COOKIE_PATH });
+  store.delete({ name: ADMIN_HINT_COOKIE, path: "/" });
   redirect("/admin/login");
 }
