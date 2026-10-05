@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import Link from "next/link";
+import { TelegramTestButton } from "@/components/admin/TelegramTestButton";
 import { CircleAlert, CircleCheck, CircleDashed, type LucideIcon } from "lucide-react";
 import { getServerEnv } from "@/config/env";
 import { checkImageBucket } from "@/lib/db/storage";
@@ -18,6 +19,8 @@ interface StatusRow {
   /** Sozlangan, lekin ishlamayapti — qizil belgi. */
   error?: boolean;
   text: string;
+  /** Qator ostidagi qo‘shimcha (masalan, sinov tugmasi). */
+  extra?: React.ReactNode;
 }
 
 function StatCard({ label, value, href, tone }: { label: string; value: string; href?: string; tone?: "warn" | "sale" }) {
@@ -63,8 +66,9 @@ export default async function AdminDashboardPage() {
       label: "Telegram bot",
       ok: env.telegramBotEnabled,
       text: env.telegramBotEnabled
-        ? "Yangi buyurtmalar adminga yuboriladi"
-        : "TELEGRAM_BOT_TOKEN / TELEGRAM_ADMIN_CHAT_ID to‘ldirilmagan",
+        ? "Yangi buyurtmalar Telegram'ingizga keladi"
+        : "Sozlanmagan — yangi buyurtmalar Telegram'ga kelmaydi (TELEGRAM_BOT_TOKEN / TELEGRAM_ADMIN_CHAT_ID)",
+      extra: env.telegramBotEnabled ? <TelegramTestButton /> : undefined,
     },
     {
       label: "Ma’lumotlar bazasi",
@@ -118,6 +122,7 @@ export default async function AdminDashboardPage() {
                 <div>
                   <p className="font-medium text-ink">{row.label}</p>
                   <p className="text-sm text-ink-muted">{row.text}</p>
+                  {row.extra}
                 </div>
               </li>
             );

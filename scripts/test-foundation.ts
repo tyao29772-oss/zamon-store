@@ -103,6 +103,7 @@ import {
   telegramChatHref,
 } from "@/lib/admin/order-list";
 import { productSchema, productToRow, rowToProduct } from "@/lib/repo/product-rows";
+import { buildOrderNotification } from "@/lib/telegram-bot";
 import type { Order, Product, ProductVariant } from "@/types";
 
 let passed = 0;
@@ -1354,6 +1355,16 @@ async function main(): Promise<void> {
     assert.equal(formatOrderTime("2026-10-04T19:30:00.000Z", now), "Bugun, 00:30", "UTC'da kecha, Toshkentda bugun");
     assert.equal(formatOrderTime("2026-09-30T05:00:00.000Z", now), "30.09.2026, 10:00");
     assert.equal(formatOrderTime("noto‘g‘ri"), "—");
+  });
+
+  await check("Telegram xabari: HTML xavfsiz, lokal manzilda tugma yo‘q (Telegram rad etmasin)", () => {
+    const message = buildOrderNotification({ ...orderFixtures[0]!, customerName: "Ali <b>& Co</b>", note: "<script>x</script>" });
+    assert.ok(message.text.includes("Ali &lt;b&gt;&amp; Co&lt;/b&gt;"), "ism ekranlangan");
+    assert.ok(!message.text.includes("<script>"), "izoh ekranlangan");
+    assert.ok(message.text.includes("+998 90 123 45 67"));
+    assert.ok(message.text.includes("14 500 000"));
+    assert.deepEqual(message.buttons, [], "localhost — tugma yo‘q");
+    assert.ok(message.text.includes("Havola: http://localhost:3000/mahsulot/"), "havola matnda");
   });
 
   await check("bog‘lanish havolalari", () => {
