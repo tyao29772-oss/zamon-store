@@ -4,7 +4,7 @@ import { ProductArt } from "@/components/art/ProductArt";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { formatDiscount, formatPrice } from "@/lib/format";
 import { getDefaultVariant, getPriceInfo, getShortSpec } from "@/lib/product";
-import { productHref } from "@/lib/urls";
+import { externalLinkProps, productHref } from "@/lib/urls";
 import type { Product } from "@/types";
 
 const PERKS = [
@@ -14,9 +14,19 @@ const PERKS = [
 ];
 
 /** Bosh sahifaning birinchi ekrani: qorong‘i panel, nur doirasi va katta mahsulot. */
-export function HeroSpotlight({ product, catalogHref }: { product: Product; catalogHref: string }) {
+interface HeroSpotlightProps {
+  product: Product;
+  /** Admin paneldagi «Bosh sahifa» sozlamalari; bo‘sh qiymatlar — mahsulotning o‘zidan. */
+  eyebrow: string;
+  title: string;
+  text: string;
+  secondary: { label: string; href: string } | null;
+}
+
+export function HeroSpotlight({ product, eyebrow, title, text, secondary }: HeroSpotlightProps) {
   const variant = getDefaultVariant(product);
   const price = getPriceInfo(product);
+  const photo = product.heroImage ?? product.images[0];
 
   return (
     <section aria-labelledby="hero-title" className="container-page pt-4 md:pt-6">
@@ -32,19 +42,20 @@ export function HeroSpotlight({ product, catalogHref }: { product: Product; cata
 
         <div className="relative grid items-center gap-2 px-6 pb-8 pt-10 md:grid-cols-[1.02fr_1fr] md:gap-6 md:px-14 md:pb-14 md:pt-16">
           <div className="order-2 md:order-1">
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/75">
-              <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
-              Haftaning tanlovi
-            </p>
+            {eyebrow && (
+              <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/75">
+                <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
+                {eyebrow}
+              </p>
+            )}
             <h1
               id="hero-title"
               className="mt-5 text-[40px] font-bold leading-[1.02] tracking-tight md:text-[68px]"
             >
-              {product.name}
+              {title || product.name}
             </h1>
             <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/70 md:text-base">
-              {product.shortDescription} Original, kafolat bilan. Narxi va mavjudligini Telegram orqali
-              tasdiqlab beramiz.
+              {text || `${product.shortDescription} Original, kafolat bilan. Narxi va mavjudligini Telegram orqali tasdiqlab beramiz.`}
             </p>
 
             <div className="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -69,9 +80,11 @@ export function HeroSpotlight({ product, catalogHref }: { product: Product; cata
                 Ko‘rish
                 <ArrowRight className="size-4" aria-hidden="true" />
               </ButtonLink>
-              <ButtonLink href={catalogHref} variant="outline-light">
-                Barcha telefonlar
-              </ButtonLink>
+              {secondary && (
+                <ButtonLink href={secondary.href} variant="outline-light" {...externalLinkProps(secondary.href)}>
+                  {secondary.label}
+                </ButtonLink>
+              )}
             </div>
 
             <ul className="mt-9 hidden flex-wrap gap-x-6 gap-y-2 text-[13px] text-white/60 md:flex">
@@ -95,6 +108,19 @@ export function HeroSpotlight({ product, catalogHref }: { product: Product; cata
                   loading="eager"
                   fetchPriority="high"
                   className="object-contain drop-shadow-[0_30px_40px_rgba(0,0,0,0.55)]"
+                />
+              </div>
+            ) : photo ? (
+              // Admin yuklagan oddiy foto odatda oq fonli — qorong‘i panelda oq kartada ko‘rsatiladi.
+              <div className="relative aspect-square w-full max-w-[300px] overflow-hidden rounded-[28px] bg-white shadow-[0_30px_60px_rgba(0,0,0,0.45)] sm:max-w-[360px] md:max-w-[440px]">
+                <Image
+                  src={photo}
+                  alt={product.name}
+                  fill
+                  sizes="(min-width: 768px) 440px, 360px"
+                  loading="eager"
+                  fetchPriority="high"
+                  className="object-contain p-[8%]"
                 />
               </div>
             ) : (

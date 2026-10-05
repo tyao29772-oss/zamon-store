@@ -29,7 +29,7 @@ export const banners: Banner[] = [
     href: "/mahsulot/samsung-galaxy-s25-ultra",
     theme: "light",
     sortOrder: 3,
-    active: true,
+    active: false,
   },
   {
     id: "banner-macbook",
@@ -39,6 +39,6 @@ export const banners: Banner[] = [
     href: "/katalog/laptoplar/macbook",
     theme: "dark",
     sortOrder: 4,
-    active: true,
+    active: false,
   },
 ];

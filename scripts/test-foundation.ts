@@ -110,6 +110,7 @@ import { buildOrderNotification } from "@/lib/telegram-bot";
 import { getServerEnv } from "@/config/env";
 import { store } from "@/data/store";
 import { mergeStoreSettings, paragraphsToText, pickStoreSettings, storeSettingsSchema, textToParagraphs } from "@/lib/settings/store-settings";
+import { DEFAULT_HOME, homeSettingsSchema, isSafeHref, mergeHomeSettings } from "@/lib/settings/home-settings";
 import type { Order, Product, ProductVariant } from "@/types";
 
 let passed = 0;
@@ -1459,6 +1460,33 @@ async function main(): Promise<void> {
     assert.equal(options.length, 25);
     assert.ok(options.some((o) => o.label === "Zaryadchiklar › Adapterlar" && o.rootName === "Aksessuarlar"));
     assert.ok(!options.some((o) => o.id === "telefonlar"));
+  });
+
+  await check("bosh sahifa: standartlar to‘g‘ri, mahsulotlar mavjud", async () => {
+    assert.ok(homeSettingsSchema.safeParse(DEFAULT_HOME).success);
+    for (const slug of [DEFAULT_HOME.hero.productSlug, ...DEFAULT_HOME.features.map((f) => f.productSlug)]) {
+      assert.ok(await getProductBySlug(slug), `mahsulot yo‘q: ${slug}`);
+    }
+    assert.ok(DEFAULT_HOME.banners.some((b) => b.active));
+  });
+
+  await check("bosh sahifa: havola tekshiruvi", () => {
+    for (const ok of ["/aksiyalar", "/katalog/telefonlar?brend=apple", "https://t.me/kanal"]) assert.ok(isSafeHref(ok), ok);
+    for (const bad of ["javascript:alert(1)", "//evil.com", "http://a.uz", "aksiyalar", "/ a", "/\\evil.com", "data:text/html,x"]) {
+      assert.ok(!isSafeHref(bad), bad);
+    }
+  });
+
+  await check("bosh sahifa: buzilgan qism standartga qaytadi, qolgani saqlanadi", () => {
+    const merged = mergeHomeSettings({ hero: { ...DEFAULT_HOME.hero, eyebrow: "Yangi" }, banners: [{ id: "x" }], featuresEnabled: false });
+    assert.equal(merged.hero.eyebrow, "Yangi");
+    assert.deepEqual(merged.banners, DEFAULT_HOME.banners);
+    assert.equal(merged.featuresEnabled, false);
+    assert.deepEqual(mergeHomeSettings(null), DEFAULT_HOME);
+    const tooMany = { ...DEFAULT_HOME, banners: Array.from({ length: 7 }, (_, i) => ({ ...DEFAULT_HOME.banners[0]!, id: `b${i}` })) };
+    assert.ok(!homeSettingsSchema.safeParse(tooMany).success);
+    const badLink = { ...DEFAULT_HOME, banners: [{ ...DEFAULT_HOME.banners[0]!, href: "javascript:alert(1)" }] };
+    assert.ok(!homeSettingsSchema.safeParse(badLink).success);
   });
 
   console.log(`\n${passed} ta tekshiruv o‘tdi, ${failures.length} ta yiqildi.`);

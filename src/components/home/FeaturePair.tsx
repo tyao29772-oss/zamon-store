@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { ProductArt } from "@/components/art/ProductArt";
 import { ButtonLink } from "@/components/ui/ButtonLink";
@@ -6,7 +7,7 @@ import { getPriceInfo } from "@/lib/product";
 import { productHref } from "@/lib/urls";
 import type { Product } from "@/types";
 
-interface FeatureProps {
+export interface FeatureProps {
   eyebrow: string;
   title: string;
   text: string;
@@ -33,14 +34,16 @@ function Feature({ eyebrow, title, text, product, tone }: FeatureProps) {
         }`}
       />
       <div className="relative max-w-[16rem]">
-        <p
-          className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${
-            dark ? "text-accent" : "text-accent-ink"
-          }`}
-        >
-          {eyebrow}
-        </p>
-        <h3 className="mt-3 font-display text-4xl font-semibold leading-[1.02] tracking-tight md:text-[44px]">
+        {eyebrow && (
+          <p
+            className={`mb-3 text-[11px] font-semibold uppercase tracking-[0.28em] ${
+              dark ? "text-accent" : "text-accent-ink"
+            }`}
+          >
+            {eyebrow}
+          </p>
+        )}
+        <h3 className=" font-display text-4xl font-semibold leading-[1.02] tracking-tight md:text-[44px]">
           {title}
         </h3>
         <p className={`mt-3 text-sm leading-relaxed ${dark ? "text-white/65" : "text-ink/70"}`}>{text}</p>
@@ -53,36 +56,33 @@ function Feature({ eyebrow, title, text, product, tone }: FeatureProps) {
         </div>
       </div>
       <div className="relative -mb-2 mt-4 flex justify-end md:absolute md:bottom-6 md:right-8 md:mt-0">
-        <ProductArt
-          product={product}
-          className={`h-[190px] w-auto drop-shadow-[0_20px_26px_rgba(0,0,0,0.3)] md:h-[250px] ${
-            product.categoryId.startsWith("laptoplar") ? "md:h-[220px]" : ""
-          }`}
-        />
+        {product.images[0] ? (
+          <div className="relative size-[190px] overflow-hidden rounded-[24px] bg-white shadow-[0_20px_40px_rgba(0,0,0,0.2)] md:size-[230px]">
+            <Image src={product.images[0]} alt={product.name} fill sizes="230px" className="object-contain p-[8%]" />
+          </div>
+        ) : (
+          <ProductArt
+            product={product}
+            className={`h-[190px] w-auto drop-shadow-[0_20px_26px_rgba(0,0,0,0.3)] md:h-[250px] ${
+              product.categoryId.startsWith("laptoplar") ? "md:h-[220px]" : ""
+            }`}
+          />
+        )}
       </div>
       <div className="hidden md:block md:h-[230px]" aria-hidden="true" />
     </article>
   );
 }
 
-export function FeaturePair({ laptop, earbuds }: { laptop: Product; earbuds: Product }) {
+/** Ikki (yoki bitta) tavsiya kartasi — admin paneldagi «Bosh sahifa»dan boshqariladi. */
+export function FeaturePair({ features }: { features: FeatureProps[] }) {
+  if (features.length === 0) return null;
   return (
     <section aria-label="Tavsiya etilgan mahsulotlar" className="container-page pt-16 md:pt-24">
-      <div className="grid gap-4 md:grid-cols-2 md:gap-5">
-        <Feature
-          eyebrow="Laptoplar"
-          title="Kun bo‘yi ishlaydigan noutbuk"
-          text={`${laptop.name}: yengil, sokin va tez. O‘qish va ish uchun.`}
-          product={laptop}
-          tone="sand"
-        />
-        <Feature
-          eyebrow="Quloqchinlar"
-          title="Shovqinsiz toza ovoz"
-          text={`${earbuds.name}: faol shovqin bekor qilish va premium ovoz.`}
-          product={earbuds}
-          tone="dark"
-        />
+      <div className={`grid gap-4 md:gap-5 ${features.length > 1 ? "md:grid-cols-2" : ""}`}>
+        {features.map((feature, index) => (
+          <Feature key={index} {...feature} />
+        ))}
       </div>
     </section>
   );

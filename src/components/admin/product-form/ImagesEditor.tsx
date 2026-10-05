@@ -26,7 +26,7 @@ interface ImagesEditorProps {
 }
 
 /** Siqilgan rasmni imzolangan havolaga yuklaydi, foizini xabar qiladi. */
-function putWithProgress(url: string, blob: Blob, type: string, onProgress: (percent: number) => void): Promise<void> {
+export function putWithProgress(url: string, blob: Blob, type: string, onProgress: (percent: number) => void): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", url);
