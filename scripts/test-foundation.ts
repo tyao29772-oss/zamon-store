@@ -105,6 +105,8 @@ import {
 import { productSchema, productToRow, rowToProduct } from "@/lib/repo/product-rows";
 import { buildOrderNotification } from "@/lib/telegram-bot";
 import { getServerEnv } from "@/config/env";
+import { store } from "@/data/store";
+import { mergeStoreSettings, paragraphsToText, pickStoreSettings, storeSettingsSchema, textToParagraphs } from "@/lib/settings/store-settings";
 import type { Order, Product, ProductVariant } from "@/types";
 
 let passed = 0;
@@ -1383,6 +1385,46 @@ async function main(): Promise<void> {
         else process.env[k] = v;
       }
     }
+  });
+
+  section("Admin: sozlamalar");
+
+  await check("sozlamalar: hozirgi standart qiymatlar sxemadan o‘tadi", () => {
+    const result = storeSettingsSchema.safeParse(pickStoreSettings(store));
+    assert.ok(result.success, result.success ? "" : JSON.stringify(flattenIssues(result.error.issues)));
+  });
+
+  await check("sozlamalar: Telegram (@, t.me havola), bot rad etiladi, telefon va Instagram tekshiruvi", () => {
+    const base = pickStoreSettings(store);
+    const parse = (patch: Partial<typeof base>) => storeSettingsSchema.safeParse({ ...base, ...patch });
+    const ok1 = parse({ telegramUsername: "@zamon_shop" });
+    assert.ok(ok1.success && ok1.data.telegramUsername === "zamon_shop");
+    const ok2 = parse({ telegramUsername: "https://t.me/zamon_shop" });
+    assert.ok(ok2.success && ok2.data.telegramUsername === "zamon_shop");
+    assert.equal(parse({ telegramUsername: "zamonstore_orders_bot" }).success, false, "bot");
+    assert.equal(parse({ telegramUsername: "ab" }).success, false, "juda qisqa");
+    const phone = parse({ phone: "90 123 45 67" });
+    assert.ok(phone.success && phone.data.phone === "+998901234567");
+    assert.equal(parse({ phone: "12345" }).success, false);
+    assert.ok(parse({ instagramUrl: "" }).success, "Instagram ixtiyoriy");
+    assert.equal(parse({ instagramUrl: "https://evil.com/x" }).success, false);
+    assert.equal(parse({ workingHours: [] }).success, false);
+    assert.equal(parse({ deliveryZones: [{ name: "X", price: -1 }] }).success, false);
+  });
+
+  await check("sozlamalar: qisman saqlangan ma’lumot standartlar ustiga qo‘yiladi, buzilgani e’tiborsiz", () => {
+    const merged = mergeStoreSettings(store, { telegramUsername: "my_shop", phone: "yomon", unknownKey: 1 });
+    assert.equal(merged.telegramUsername, "my_shop");
+    assert.equal(merged.phone, store.phone, "buzilgan telefon — standart qoldi");
+    assert.equal(merged.latitude, store.latitude, "manzil o‘zgarmagan — koordinata qoldi");
+    const moved = mergeStoreSettings(store, { address: "Samarqand sh., Registon ko‘chasi 1" });
+    assert.equal(moved.latitude, undefined, "manzil o‘zgardi — eski koordinata olib tashlandi");
+    assert.deepEqual(mergeStoreSettings(store, null), store);
+  });
+
+  await check("sozlamalar: matn ↔ xatboshilar", () => {
+    assert.deepEqual(textToParagraphs("Birinchi\nqator davomi\n\n\nIkkinchi  \n\n  "), ["Birinchi qator davomi", "Ikkinchi"]);
+    assert.equal(paragraphsToText(["A", "B"]), "A\n\nB");
   });
 
   await check("bog‘lanish havolalari", () => {

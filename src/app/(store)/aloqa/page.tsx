@@ -18,12 +18,15 @@ export const metadata: Metadata = {
 
 export default async function ContactPage() {
   const store = await getStore();
+  // Koordinata bo‘lsa — aniq nuqta, aks holda (admin manzilni o‘zgartirgan) — manzil bo‘yicha qidiruv.
   const mapsUrl =
     store.latitude && store.longitude
       ? `https://www.google.com/maps/search/?api=1&query=${store.latitude},${store.longitude}`
-      : undefined;
-  // Instagram handini havoladan olamiz — slugdan taxmin qilish shart emas.
-  const instagramHandle = new URL(store.instagramUrl).pathname.replace(/\//g, "");
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(store.address)}`;
+  // Instagram ixtiyoriy (sozlamalarda bo‘sh qoldirilishi mumkin) — bo‘sh bo‘lsa ko‘rsatilmaydi.
+  const instagramHandle = store.instagramUrl
+    ? store.instagramUrl.replace(/^https?:\/\/(www\.)?instagram\.com\//, "").replace(/\/+$/, "")
+    : "";
 
   const crumbs = [{ label: "Bosh sahifa", href: "/" }, { label: "Aloqa" }];
   const breadcrumbJsonLd = buildBreadcrumbJsonLd(crumbs, BASE_PATH);
@@ -68,20 +71,22 @@ export default async function ContactPage() {
             </a>
           </li>
 
-          <li className="rounded-2xl border border-line bg-surface/70 p-5">
-            <span className="flex size-11 items-center justify-center rounded-full bg-accent-soft text-accent-ink">
-              <Camera className="size-5" strokeWidth={1.6} aria-hidden="true" />
-            </span>
-            <h2 className="mt-4 text-sm font-semibold text-ink">Instagram</h2>
-            <a
-              href={store.instagramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1 block text-[15px] text-ink-muted hover:text-ink"
-            >
-              @{instagramHandle}
-            </a>
-          </li>
+          {instagramHandle && (
+            <li className="rounded-2xl border border-line bg-surface/70 p-5">
+              <span className="flex size-11 items-center justify-center rounded-full bg-accent-soft text-accent-ink">
+                <Camera className="size-5" strokeWidth={1.6} aria-hidden="true" />
+              </span>
+              <h2 className="mt-4 text-sm font-semibold text-ink">Instagram</h2>
+              <a
+                href={store.instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 block text-[15px] text-ink-muted hover:text-ink"
+              >
+                @{instagramHandle}
+              </a>
+            </li>
+          )}
 
           <li className="rounded-2xl border border-line bg-surface/70 p-5">
             <span className="flex size-11 items-center justify-center rounded-full bg-accent-soft text-accent-ink">

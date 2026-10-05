@@ -1,7 +1,7 @@
 "use client";
 
 import { Send } from "lucide-react";
-import { publicEnv } from "@/config/env";
+import { useStoreContact } from "@/providers/StoreContactProvider";
 import { trackEvent } from "@/lib/analytics";
 import { describeVariantForOrder, getVariantStockStatus } from "@/lib/product";
 import { createTelegramOrderLink } from "@/lib/telegram";
@@ -39,10 +39,11 @@ export function TelegramOrderButton({
   label: labelProp,
   category,
 }: TelegramOrderButtonProps) {
+  const { telegramUsername } = useStoreContact();
   const outOfStock = getVariantStockStatus(variant) === "out_of_stock";
   const label = outOfStock ? "Xabar bering" : (labelProp ?? "Telegram orqali buyurtma berish");
 
-  const href = createTelegramOrderLink(publicEnv.telegramUsername, {
+  const href = createTelegramOrderLink(telegramUsername, {
     productName: product.name,
     variantText: describeVariantForOrder(product, variant),
     price: variant.price,

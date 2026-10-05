@@ -57,8 +57,16 @@ export function ProductForm({ mode, initialValues, brands, categories, canSave }
   const formRef = useRef<HTMLFormElement>(null);
 
   const dirty = snapshot(values) !== saved;
-  const set = <K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) =>
+  // Maydon o‘zgarishi bilan uning (va ichidagi qatorlarning) eski xatosi yo‘qoladi.
+  const clearErrors = (key: string) =>
+    setErrors((prev) => {
+      const next = Object.fromEntries(Object.entries(prev).filter(([path]) => path !== key && !path.startsWith(`${key}.`)));
+      return Object.keys(next).length === Object.keys(prev).length ? prev : next;
+    });
+  const set = <K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) => {
     setValues((current) => ({ ...current, [key]: value }));
+    clearErrors(key);
+  };
 
   // Saqlanmagan o‘zgarish bilan sahifani yopish/yangilashdan oldin brauzer so‘raydi.
   useEffect(() => {
@@ -79,8 +87,11 @@ export function ProductForm({ mode, initialValues, brands, categories, canSave }
     return { min: prices.length ? Math.min(...prices) : 0, max: prices.length ? Math.max(...prices) : 0, stock };
   }, [values.variants]);
 
-  const setName = (name: string) =>
+  const setName = (name: string) => {
     setValues((current) => ({ ...current, name, slug: slugTouched ? current.slug : slugify(name) }));
+    clearErrors("name");
+    if (!slugTouched) clearErrors("slug");
+  };
 
   const focusFirstError = () => {
     requestAnimationFrame(() => {

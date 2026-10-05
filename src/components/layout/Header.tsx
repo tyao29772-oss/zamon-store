@@ -5,12 +5,12 @@ import { Logo } from "@/components/brand/Logo";
 import { CatalogTrigger } from "@/components/layout/CatalogTrigger";
 import { FavoritesLink } from "@/components/favorites/FavoritesLink";
 import { SearchTrigger } from "@/components/search/SearchTrigger";
-import { publicEnv } from "@/config/env";
 import { createTelegramLink } from "@/lib/telegram";
 import { getRootCategories } from "@/lib/repo/categories";
+import { getStore } from "@/lib/repo/store";
 
 export async function Header() {
-  const roots = await getRootCategories();
+  const [roots, store] = await Promise.all([getRootCategories(), getStore()]);
 
   const nav = [
     ...roots.map((category) => ({ label: category.name, href: category.href })),
@@ -43,7 +43,7 @@ export async function Header() {
           <SearchTrigger />
           <FavoritesLink className="hidden lg:inline-flex" />
           <a
-            href={createTelegramLink(publicEnv.telegramUsername)}
+            href={createTelegramLink(store.telegramUsername)}
             target="_blank"
             rel="noopener noreferrer"
             className="ml-1 inline-flex h-11 items-center gap-2 rounded-full bg-ink px-4 text-sm font-semibold text-white transition-colors hover:bg-black"

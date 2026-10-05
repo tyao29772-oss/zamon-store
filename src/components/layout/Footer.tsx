@@ -97,6 +97,7 @@ export async function Footer() {
                 ))}
               </span>
             </li>
+            {store.instagramUrl && (
             <li className="pl-7">
               <a
                 href={store.instagramUrl}
@@ -107,6 +108,7 @@ export async function Footer() {
                 Instagram
               </a>
             </li>
+            )}
           </ul>
         </div>
       </div>

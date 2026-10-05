@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, ShoppingBag, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, Package, Settings, ShoppingBag, type LucideIcon } from "lucide-react";
 
 interface NavItem {
   label: string;
@@ -16,6 +16,7 @@ const ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard, ready: true },
   { label: "Buyurtmalar", href: "/admin/buyurtmalar", icon: ShoppingBag, ready: true },
   { label: "Mahsulotlar", href: "/admin/mahsulotlar", icon: Package, ready: true },
+  { label: "Sozlamalar", href: "/admin/sozlamalar", icon: Settings, ready: true },
 ];
 
 function isActive(pathname: string, href: string): boolean {

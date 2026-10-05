@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, Copy, Send, ShieldCheck, X } from "lucide-react";
-import { publicEnv } from "@/config/env";
+import { useStoreContact } from "@/providers/StoreContactProvider";
 import { formatPrice } from "@/lib/format";
 import { describeVariantForOrder, getVariantPriceInfo } from "@/lib/product";
 import { normalizeUzPhone } from "@/lib/phone";
@@ -27,6 +27,7 @@ type Step = "form" | "success";
  * (ProductView'da), shuning uchun har ochilishda holat toza boshlanadi.
  */
 export function OrderModal({ product, variant, onClose }: OrderModalProps) {
+  const { telegramUsername } = useStoreContact();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const { show } = useToast();
@@ -103,7 +104,7 @@ export function OrderModal({ product, variant, onClose }: OrderModalProps) {
       setStep("success");
 
       const link = createTelegramLink(
-        publicEnv.telegramUsername,
+        telegramUsername,
         buildOrderMessage({
           orderId: data.orderId,
           productName: product.name,
@@ -125,7 +126,7 @@ export function OrderModal({ product, variant, onClose }: OrderModalProps) {
   const telegramLink =
     step === "success" && orderId
       ? createTelegramLink(
-          publicEnv.telegramUsername,
+          telegramUsername,
           buildOrderMessage({
             orderId,
             productName: product.name,
