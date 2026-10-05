@@ -1,51 +1,82 @@
 import { z } from "zod";
-import { brands } from "@/data/brands";
-import { categories } from "@/data/categories";
 import { transliterate } from "@/lib/search/normalize";
 import type { Condition, Product, ProductAttributeValue, ProductVariant, SpecGroup } from "@/types";
 
 /**
  * Admin mahsulot formasi: formadagi qiymatlar (hammasi matn — inputlar uchun qulay),
  * server tekshiruvi va formadan `Product` yasash. Brauzer ham, server ham shu faylni
- * ishlatadi, shuning uchun bu yerda server-only narsa yo‘q.
+ * ishlatadi, shuning uchun bu yerda server-only narsa yo‘q. Brend va kategoriyalar
+ * bazadan keladi (admin qo‘shishi mumkin) — shu sabab ular parametr sifatida beriladi.
  */
 
 /* ------------------------------------------------------------------ Kategoriya va brend */
 
-const parentIds = new Set(categories.map((c) => c.parentId).filter((id): id is string => Boolean(id)));
-
-/** Mahsulot faqat eng chuqur (barg) kategoriyaga biriktiriladi. */
-export const LEAF_CATEGORIES = categories.filter((c) => !parentIds.has(c.id));
-const leafIds = new Set(LEAF_CATEGORIES.map((c) => c.id));
-const brandIds = new Set(brands.map((b) => b.id));
-
-/** Formadagi kategoriya tanlovi: faqat barg kategoriyalar, to‘liq yo‘li bilan, saytdagi tartibda. */
-export function getCategoryOptions(): { id: string; label: string; rootName: string }[] {
-  const byId = new Map(categories.map((c) => [c.id, c]));
-  const chain = (id: string) => {
-    const names: string[] = [];
-    const order: number[] = [];
-    for (let c = byId.get(id); c; c = c.parentId ? byId.get(c.parentId) : undefined) {
-      names.unshift(c.name);
-      order.unshift(c.sortOrder);
-    }
-    return { names, order };
-  };
-  return LEAF_CATEGORIES.map((c) => ({ c, ...chain(c.id) }))
-    .sort((a, b) => {
-      for (let i = 0; i < Math.max(a.order.length, b.order.length); i += 1) {
-        const diff = (a.order[i] ?? -1) - (b.order[i] ?? -1);
-        if (diff !== 0) return diff;
-      }
-      return 0;
-    })
-    .map(({ c, names }) => ({ id: c.id, label: names.slice(1).join(" › ") || names[0]!, rootName: names[0]! }));
+export interface CategoryLike {
+  id: string;
+  parentId: string | null;
+  name: string;
+  sortOrder: number;
 }
 
-export function getRootId(categoryId: string): string | null {
-  let current = categories.find((c) => c.id === categoryId);
-  while (current?.parentId) current = categories.find((c) => c.id === current!.parentId);
+export interface CategoryOption {
+  id: string;
+  /** `Zaryadchiklar › Adapterlar` */
+  label: string;
+  rootName: string;
+  /** Filtr maydonlari va xususiyat shabloni ildizga qarab tanlanadi. */
+  rootId: string;
+}
+
+/** Mahsulot faqat eng chuqur (barg) kategoriyaga biriktiriladi. */
+export function getLeafCategories<T extends CategoryLike>(categories: T[]): T[] {
+  const parentIds = new Set(categories.map((c) => c.parentId).filter((id): id is string => Boolean(id)));
+  return categories.filter((c) => !parentIds.has(c.id));
+}
+
+export function getRootId(categoryId: string, categories: CategoryLike[]): string | null {
+  const byId = new Map(categories.map((c) => [c.id, c]));
+  let current = byId.get(categoryId);
+  for (let guard = 0; current?.parentId && guard < 20; guard += 1) current = byId.get(current.parentId);
   return current?.id ?? null;
+}
+
+/** Formadagi kategoriya tanlovi: faqat barg kategoriyalar, to‘liq yo‘li bilan, saytdagi tartibda. */
+export function getCategoryOptions(categories: CategoryLike[]): CategoryOption[] {
+  const byId = new Map(categories.map((c) => [c.id, c]));
+  const chain = (id: string) => {
+    const nodes: CategoryLike[] = [];
+    for (let c = byId.get(id); c && nodes.length < 20; c = c.parentId ? byId.get(c.parentId) : undefined) nodes.unshift(c);
+    return nodes;
+  };
+  return getLeafCategories(categories)
+    .map((c) => ({ c, nodes: chain(c.id) }))
+    .sort((a, b) => {
+      for (let i = 0; i < Math.max(a.nodes.length, b.nodes.length); i += 1) {
+        const diff = (a.nodes[i]?.sortOrder ?? -1) - (b.nodes[i]?.sortOrder ?? -1);
+        if (diff !== 0) return diff;
+      }
+      return a.c.name.localeCompare(b.c.name, "uz");
+    })
+    .map(({ c, nodes }) => ({
+      id: c.id,
+      label: nodes.slice(1).map((n) => n.name).join(" › ") || nodes[0]!.name,
+      rootName: nodes[0]!.name,
+      rootId: nodes[0]!.id,
+    }));
+}
+
+/**
+ * Brend va kategoriya bazada mavjudligini tekshiradi (formadan kelgan id'larga ishonilmaydi).
+ * Kategoriya barg bo‘lishi shart — ichida bo‘limlari bor kategoriyaga mahsulot qo‘yilmaydi.
+ */
+export function validateTaxonomy(
+  input: { brandId: string; categoryId: string },
+  taxonomy: { brandIds: Set<string>; leafCategoryIds: Set<string> },
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  if (!taxonomy.brandIds.has(input.brandId)) errors.brandId = "Brendni tanlang";
+  if (!taxonomy.leafCategoryIds.has(input.categoryId)) errors.categoryId = "Kategoriyani tanlang (ichida bo‘limlari yo‘q kategoriya)";
+  return errors;
 }
 
 /* ------------------------------------------------------------------ Filtr atributlari */
@@ -75,8 +106,7 @@ export const ATTRIBUTE_META: Record<AttributeKey, AttributeMeta> = {
 };
 
 /** Kategoriyaga qarab formada ko‘rsatiladigan atributlar (saytdagi filtrlar bilan bir xil). */
-export function getAttributeKeys(categoryId: string): AttributeKey[] {
-  const root = getRootId(categoryId);
+export function getAttributeKeys(categoryId: string, root: string | null): AttributeKey[] {
   if (root === "laptoplar") return ["cpu", "gpu", "screenSize"];
   if (root === "aksessuarlar") {
     if (categoryId.includes("chexollar")) return ["compatibility", "material"];
@@ -384,8 +414,8 @@ const SPEC_TEMPLATES: Record<string, SpecGroup[]> = {
   aksessuarlar: [{ title: "Asosiy", items: [{ label: "Moslik", value: "" }, { label: "Materiali", value: "" }] }],
 };
 
-export function getSpecTemplate(categoryId: string): SpecGroup[] {
-  const template = SPEC_TEMPLATES[getRootId(categoryId) ?? ""] ?? [{ title: "Asosiy", items: [{ label: "", value: "" }] }];
+export function getSpecTemplate(rootId: string | null): SpecGroup[] {
+  const template = SPEC_TEMPLATES[rootId ?? ""] ?? [{ title: "Asosiy", items: [{ label: "", value: "" }] }];
   return structuredClone(template);
 }
 
@@ -449,8 +479,9 @@ export const productInputSchema = z
       .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Manzilda faqat kichik lotin harflari, raqam va «-» bo‘lishi mumkin")
       // `/admin/mahsulotlar/yangi` sahifasi bilan to‘qnashmasin.
       .refine((slug) => slug !== "yangi", "Bu so‘z band — boshqa manzil yozing"),
-    brandId: z.string().refine((id) => brandIds.has(id), "Brendni tanlang"),
-    categoryId: z.string().refine((id) => leafIds.has(id), "Kategoriyani tanlang"),
+    // Mavjudligi serverda bazadagi ro‘yxat bilan tekshiriladi (validateTaxonomy).
+    brandId: z.string().trim().min(1, "Brendni tanlang").max(60),
+    categoryId: z.string().trim().min(1, "Kategoriyani tanlang").max(120),
     model: text(120, "Model"),
     shortDescription: text(300, "Qisqa tavsif"),
     description: text(5000, "To‘liq tavsif"),
@@ -501,10 +532,10 @@ export type ProductInput = z.infer<typeof productInputSchema>;
 
 /* ------------------------------------------------------------------ Formadan mahsulot */
 
-function buildAttributes(input: ProductInput, existing: Product["attributes"]): Product["attributes"] {
+function buildAttributes(input: ProductInput, existing: Product["attributes"], rootId: string | null): Product["attributes"] {
   // Faqat formada KO‘RSATILGAN maydonlar yangilanadi. Qolganlari (powerbank sig‘imi,
   // shu kategoriyada ko‘rinmaydigan port turi va h.k.) o‘zgarishsiz saqlanadi — jimgina o‘chmaydi.
-  const shown = getAttributeKeys(input.categoryId);
+  const shown = getAttributeKeys(input.categoryId, rootId);
   const result: Product["attributes"] = {};
   for (const [key, value] of Object.entries(existing)) {
     if (!shown.includes(key as AttributeKey)) result[key] = value;
@@ -540,7 +571,7 @@ function cleanSpecs(specs: ProductInput["specs"]): SpecGroup[] {
  * Tekshirilgan formadan to‘liq `Product` yasaydi. Mavjud variantlar id'si saqlanadi
  * (faqat shu mahsulotga tegishli bo‘lsa); yangi variantlarga noyob id beriladi.
  */
-export function buildProductFromInput(input: ProductInput, existing: Product | null, nowIso: string): Product {
+export function buildProductFromInput(input: ProductInput, existing: Product | null, nowIso: string, rootId: string | null): Product {
   const slug = existing ? existing.slug : input.slug;
   const existingIds = new Set(existing?.variants.map((v) => v.id) ?? []);
   const usedIds = new Set<string>();
@@ -591,7 +622,7 @@ export function buildProductFromInput(input: ProductInput, existing: Product | n
     heroImage: existing?.heroImage,
     variants,
     specs: cleanSpecs(input.specs),
-    attributes: buildAttributes(input, existing?.attributes ?? {}),
+    attributes: buildAttributes(input, existing?.attributes ?? {}, rootId),
     keywords: splitList(input.keywords).slice(0, 50),
     featured: input.featured,
     popularity: existing?.popularity ?? 0,

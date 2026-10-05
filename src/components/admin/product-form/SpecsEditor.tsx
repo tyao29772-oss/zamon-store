@@ -7,18 +7,19 @@ import { inputClass, Section } from "./fields";
 
 interface SpecsEditorProps {
   specs: SpecGroup[];
-  categoryId: string;
+  /** Tanlangan kategoriyaning ildizi (telefonlar / laptoplar / aksessuarlar ...). */
+  rootId: string | null;
   onChange: (specs: SpecGroup[]) => void;
 }
 
 /** Xususiyatlar: bo‘limlar (Ekran, Kamera ...) va ularning qatorlari. Bo‘sh qatorlar saqlanmaydi. */
-export function SpecsEditor({ specs, categoryId, onChange }: SpecsEditorProps) {
+export function SpecsEditor({ specs, rootId, onChange }: SpecsEditorProps) {
   const setGroup = (index: number, group: SpecGroup) => onChange(specs.map((g, i) => (i === index ? group : g)));
 
   const applyTemplate = () => {
     const hasValues = specs.some((g) => g.items.some((item) => item.value.trim()));
     if (hasValues && !window.confirm("Hozirgi xususiyatlar shablon bilan almashtiriladi. Davom etasizmi?")) return;
-    onChange(getSpecTemplate(categoryId));
+    onChange(getSpecTemplate(rootId));
   };
 
   return (
@@ -29,8 +30,8 @@ export function SpecsEditor({ specs, categoryId, onChange }: SpecsEditorProps) {
         <button
           type="button"
           onClick={applyTemplate}
-          disabled={!categoryId}
-          title={categoryId ? undefined : "Avval kategoriyani tanlang"}
+          disabled={!rootId}
+          title={rootId ? undefined : "Avval kategoriyani tanlang"}
           className="inline-flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:border-ink/40 disabled:opacity-40"
         >
           <LayoutTemplate className="size-4" aria-hidden="true" />

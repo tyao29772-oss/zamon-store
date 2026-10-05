@@ -7,8 +7,8 @@ import { saveProductAction, type SaveProductTarget } from "@/app/admin/(panel)/m
 import {
   ATTRIBUTE_META,
   getAttributeKeys,
-  getRootId,
   slugify,
+  type CategoryOption,
   type ProductFormValues,
 } from "@/lib/admin/product-form";
 import { formatNumber, formatPrice } from "@/lib/format";
@@ -19,12 +19,7 @@ import { ImagesEditor } from "./ImagesEditor";
 import { SpecsEditor } from "./SpecsEditor";
 import { VariantsEditor } from "./VariantsEditor";
 
-export interface CategoryOption {
-  id: string;
-  /** `Aksessuarlar › Zaryadchiklar › Adapterlar` */
-  label: string;
-  rootName: string;
-}
+export type { CategoryOption };
 
 interface ProductFormProps {
   mode: "create" | "edit";
@@ -78,8 +73,9 @@ export function ProductForm({ mode, initialValues, brands, categories, canSave }
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
 
-  const attributeKeys = values.categoryId ? getAttributeKeys(values.categoryId) : [];
-  const showRam = getRootId(values.categoryId) === "laptoplar" || values.variants.some((v) => v.ram);
+  const rootId = categories.find((c) => c.id === values.categoryId)?.rootId ?? null;
+  const attributeKeys = values.categoryId ? getAttributeKeys(values.categoryId, rootId) : [];
+  const showRam = rootId === "laptoplar" || values.variants.some((v) => v.ram);
 
   const summary = useMemo(() => {
     const prices = values.variants.map((v) => Number(v.price.replace(/[^\d]/g, ""))).filter((n) => n > 0);
@@ -340,7 +336,7 @@ export function ProductForm({ mode, initialValues, brands, categories, canSave }
               </div>
             </Section>
 
-            <SpecsEditor specs={values.specs} categoryId={values.categoryId} onChange={(specs) => set("specs", specs)} />
+            <SpecsEditor specs={values.specs} rootId={values.categoryId ? rootId : null} onChange={(specs) => set("specs", specs)} />
           </div>
 
           {/* O‘ng ustun: holat, saqlash, rasmlar */}

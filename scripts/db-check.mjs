@@ -44,7 +44,7 @@ if (key.startsWith("sb_publishable_") || key.includes("anon")) {
 const headers = { apikey: key };
 if (key.startsWith("eyJ")) headers.Authorization = `Bearer ${key}`;
 
-for (const table of ["orders", "events", "products"]) {
+for (const table of ["orders", "events", "products", "settings", "brands", "categories"]) {
   try {
     const response = await fetch(`${url}/rest/v1/${table}?select=*`, {
       method: "HEAD",

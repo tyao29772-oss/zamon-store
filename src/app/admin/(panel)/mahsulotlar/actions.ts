@@ -3,7 +3,18 @@
 import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { applyQuickEdit, buildProductFromInput, flattenIssues, productInputSchema, quickEditSchema } from "@/lib/admin/product-form";
+import {
+  applyQuickEdit,
+  buildProductFromInput,
+  flattenIssues,
+  getLeafCategories,
+  getRootId,
+  productInputSchema,
+  quickEditSchema,
+  validateTaxonomy,
+} from "@/lib/admin/product-form";
+import { getBrands } from "@/lib/repo/brands";
+import { getCategories } from "@/lib/repo/categories";
 import { requireAdmin } from "@/lib/admin/auth";
 import { createSignedImageUpload, IMAGE_TYPES, isOwnUploadedImage, type ImageContentType } from "@/lib/db/storage";
 import { DbError, isDbConfigured } from "@/lib/db/supabase";
@@ -97,7 +108,16 @@ export async function saveProductAction(target: SaveProductTarget, values: unkno
       return { ok: false, error: "Rasmlardan biri noma’lum manzildan. Uni o‘chirib, qayta yuklang.", fieldErrors: { images: "Noma’lum rasm manzili" } };
     }
 
-    const product = buildProductFromInput(parsed.data, existing, new Date().toISOString());
+    const [brands, categories] = await Promise.all([getBrands(), getCategories()]);
+    const taxonomyErrors = validateTaxonomy(parsed.data, {
+      brandIds: new Set(brands.map((b) => b.id)),
+      leafCategoryIds: new Set(getLeafCategories(categories).map((c) => c.id)),
+    });
+    if (Object.keys(taxonomyErrors).length > 0) {
+      return { ok: false, error: "Brend yoki kategoriya topilmadi — ro‘yxatdan qayta tanlang.", fieldErrors: taxonomyErrors };
+    }
+
+    const product = buildProductFromInput(parsed.data, existing, new Date().toISOString(), getRootId(parsed.data.categoryId, categories));
     const check = productSchema.safeParse(product);
     if (!check.success) {
       console.error("[admin/products] yakuniy tekshiruv:", check.error.issues);

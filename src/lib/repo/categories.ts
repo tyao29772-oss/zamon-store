@@ -1,19 +1,21 @@
-import { categories } from "@/data/categories";
-import type { CategoryNode, ResolvedCategory } from "@/types";
+import { loadTaxonomy } from "@/lib/repo/taxonomy";
+import type { Category, CategoryNode, ResolvedCategory } from "@/types";
 
 /**
- * Kategoriya repository'si. Hozir data fayldan o‘qiydi; keyin DB'ga almashtiriladi —
- * funksiya imzolari (async) o‘zgarmaydi.
+ * Kategoriya repository'si: bazadan (admin «Kategoriyalar»), bo‘lmasa standart ro‘yxat.
+ * Daraxt indeksi ro‘yxat o‘zgargandagina qayta quriladi.
  */
 
-interface CategoryIndex {
+export interface CategoryIndex {
   list: ResolvedCategory[];
   byId: Map<string, ResolvedCategory>;
 }
 
-let cachedIndex: CategoryIndex | null = null;
+/** Bir xil ro‘yxat uchun indeks qayta qurilmaydi (ro‘yxat obyekti bo‘yicha). */
+const indexCache = new WeakMap<Category[], CategoryIndex>();
 
-function buildIndex(): CategoryIndex {
+/** Sof funksiya: ro‘yxatdan yo‘llar (`telefonlar/iphone`), chuqurlik va bolalar bilan indeks. */
+export function buildCategoryIndex(categories: Category[]): CategoryIndex {
   const rawById = new Map(categories.map((c) => [c.id, c]));
   if (rawById.size !== categories.length) {
     throw new Error("Kategoriya id'lari takrorlangan");
@@ -65,32 +67,37 @@ function buildIndex(): CategoryIndex {
   return { list, byId: resolved };
 }
 
-function getIndex(): CategoryIndex {
-  cachedIndex ??= buildIndex();
-  return cachedIndex;
+async function getIndex(): Promise<CategoryIndex> {
+  const { categories } = await loadTaxonomy();
+  let index = indexCache.get(categories);
+  if (!index) {
+    index = buildCategoryIndex(categories);
+    indexCache.set(categories, index);
+  }
+  return index;
 }
 
 export async function getCategories(): Promise<ResolvedCategory[]> {
-  return getIndex().list;
+  return (await getIndex()).list;
 }
 
 export async function getRootCategories(): Promise<ResolvedCategory[]> {
-  return getIndex().list.filter((c) => c.parentId === null);
+  return (await getIndex()).list.filter((c) => c.parentId === null);
 }
 
 export async function getCategoryById(id: string): Promise<ResolvedCategory | null> {
-  return getIndex().byId.get(id) ?? null;
+  return (await getIndex()).byId.get(id) ?? null;
 }
 
 /** `["telefonlar", "iphone"]` → iPhone kategoriyasi. Topilmasa `null`. */
 export async function getCategoryByPath(segments: string[]): Promise<ResolvedCategory | null> {
   if (segments.length === 0) return null;
   const path = segments.join("/");
-  return getIndex().list.find((c) => c.path === path) ?? null;
+  return (await getIndex()).list.find((c) => c.path === path) ?? null;
 }
 
 export async function getChildCategories(id: string): Promise<ResolvedCategory[]> {
-  const { byId } = getIndex();
+  const { byId } = await getIndex();
   const node = byId.get(id);
   if (!node) return [];
   return node.childIds.map((childId) => byId.get(childId)!);
@@ -98,7 +105,7 @@ export async function getChildCategories(id: string): Promise<ResolvedCategory[]
 
 /** Ildizdan berilgan kategoriyagacha zanjir (breadcrumb uchun). */
 export async function getCategoryChain(id: string): Promise<ResolvedCategory[]> {
-  const { byId } = getIndex();
+  const { byId } = await getIndex();
   const chain: ResolvedCategory[] = [];
   let current = byId.get(id) ?? null;
   while (current) {
@@ -110,7 +117,7 @@ export async function getCategoryChain(id: string): Promise<ResolvedCategory[]> 
 
 /** Kategoriyaning o‘zi va barcha avlodlari id'lari. */
 export async function getDescendantIds(id: string): Promise<string[]> {
-  const { byId } = getIndex();
+  const { byId } = await getIndex();
   const result: string[] = [];
   const stack = [id];
   while (stack.length > 0) {
@@ -129,12 +136,10 @@ export async function getRootCategoryId(id: string): Promise<string | null> {
 }
 
 export async function getCategoryTree(): Promise<CategoryNode[]> {
-  const { byId } = getIndex();
+  const { byId, list } = await getIndex();
   const toNode = (category: ResolvedCategory): CategoryNode => ({
     ...category,
     children: category.childIds.map((childId) => toNode(byId.get(childId)!)),
   });
-  return getIndex()
-    .list.filter((c) => c.parentId === null)
-    .map(toNode);
+  return list.filter((c) => c.parentId === null).map(toNode);
 }

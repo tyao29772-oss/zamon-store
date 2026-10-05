@@ -6,6 +6,7 @@ import { ProductForm } from "@/components/admin/product-form/ProductForm";
 import { duplicateFormValues, emptyFormValues, getCategoryOptions } from "@/lib/admin/product-form";
 import { isDbConfigured } from "@/lib/db/supabase";
 import { getBrands } from "@/lib/repo/brands";
+import { getCategories } from "@/lib/repo/categories";
 import { getProductForAdmin } from "@/lib/repo/products-admin";
 import { requireAdmin } from "@/lib/admin/auth";
 
@@ -16,8 +17,9 @@ export default async function NewProductPage({ searchParams }: PageProps<"/admin
   // Layout ham tekshiradi, lekin sahifalar orasida yurganda layout qayta ishlamasligi mumkin — har sahifa o‘zi ham tekshiradi.
   await requireAdmin();
   const { nusxa } = await searchParams;
-  const [brands, source] = await Promise.all([
+  const [brands, categories, source] = await Promise.all([
     getBrands(),
+    getCategories(),
     typeof nusxa === "string" ? getProductForAdmin(nusxa) : Promise.resolve(null),
   ]);
 
@@ -39,7 +41,7 @@ export default async function NewProductPage({ searchParams }: PageProps<"/admin
         mode="create"
         initialValues={source ? duplicateFormValues(source) : emptyFormValues()}
         brands={brands}
-        categories={getCategoryOptions()}
+        categories={getCategoryOptions(categories)}
         canSave={isDbConfigured()}
       />
     </div>

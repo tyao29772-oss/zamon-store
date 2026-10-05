@@ -81,6 +81,9 @@ import {
 } from "@/lib/admin/product-list";
 import {
   addMatrixVariants,
+  getLeafCategories,
+  getRootId,
+  validateTaxonomy,
   applyQuickEdit,
   duplicateFormValues,
   quickEditSchema,
@@ -1163,6 +1166,8 @@ async function main(): Promise<void> {
 
   section("Admin: mahsulot formasi");
 
+  const rootOf = (categoryId: string) => getRootId(categoryId, categories);
+
   await check("slugify: o‘zbekcha, kirill, belgilar", () => {
     assert.equal(slugify("iPhone 15 Pro Max"), "iphone-15-pro-max");
     assert.equal(slugify("G‘ilof «Shaffof» (o‘zbek)"), "gilof-shaffof-ozbek");
@@ -1180,7 +1185,7 @@ async function main(): Promise<void> {
     for (const product of allProducts) {
       const parsed = productInputSchema.safeParse(productToFormValues(product));
       assert.ok(parsed.success, `${product.slug}: ${parsed.success ? "" : JSON.stringify(flattenIssues(parsed.error.issues))}`);
-      const built = buildProductFromInput(parsed.data, product, product.updatedAt);
+      const built = buildProductFromInput(parsed.data, product, product.updatedAt, rootOf(product.categoryId));
       assert.deepEqual(JSON.parse(JSON.stringify(built)), JSON.parse(JSON.stringify(product)), product.slug);
       assert.ok(productSchema.safeParse(built).success, product.slug);
     }
@@ -1190,7 +1195,7 @@ async function main(): Promise<void> {
     const product = allProducts.find((p) => p.slug === "iphone-15-pro-max")!;
     const values = productToFormValues(product);
     values.variants[0]!.price = "13 999 000";
-    const built = buildProductFromInput(productInputSchema.parse(values), product, "2026-10-05T00:00:00.000Z");
+    const built = buildProductFromInput(productInputSchema.parse(values), product, "2026-10-05T00:00:00.000Z", rootOf(product.categoryId));
     assert.equal(built.variants[0]!.price, 13_999_000);
     assert.equal(built.variants[0]!.id, product.variants[0]!.id);
     assert.deepEqual(JSON.parse(JSON.stringify(built.variants.slice(1))), JSON.parse(JSON.stringify(product.variants.slice(1))));
@@ -1216,7 +1221,7 @@ async function main(): Promise<void> {
     assert.equal(values.variants.length, 4, "bo‘sh qator jadval bilan almashishi kerak");
     // Soxta: boshqa mahsulotning variant id'sini yuborish.
     values.variants[0]!.id = "iphone-15-pro-max-256gb-natural-titanium-new";
-    const built = buildProductFromInput(productInputSchema.parse(values), null, "2026-10-05T00:00:00.000Z");
+    const built = buildProductFromInput(productInputSchema.parse(values), null, "2026-10-05T00:00:00.000Z", rootOf(values.categoryId));
     const ids = built.variants.map((v) => v.id);
     assert.equal(new Set(ids).size, 4);
     assert.ok(ids.every((id) => id.startsWith("test-telefon-x-")), ids.join(", "));
@@ -1243,16 +1248,19 @@ async function main(): Promise<void> {
     assert.ok(errors["variants.1.oldPrice"]?.includes("Eski narx"), "eski narx");
     assert.ok(errors["variants.1.color"]?.includes("bir xil"), "takroriy variant");
     assert.equal(productInputSchema.safeParse({ ...values, slug: "yangi" }).success, false);
-    assert.equal(productInputSchema.safeParse({ ...values, categoryId: "telefonlar" }).success, false, "ildiz kategoriya emas, barg kerak");
+    const taxonomy = { brandIds: new Set(brands.map((b) => b.id)), leafCategoryIds: new Set(getLeafCategories(categories).map((c) => c.id)) };
+    assert.ok(validateTaxonomy({ brandId: "apple", categoryId: "telefonlar" }, taxonomy).categoryId, "ildiz kategoriya emas, barg kerak");
+    assert.ok(validateTaxonomy({ brandId: "yoq-brend", categoryId: "telefonlar-iphone" }, taxonomy).brandId, "mavjud bo‘lmagan brend");
+    assert.deepEqual(validateTaxonomy({ brandId: "apple", categoryId: "telefonlar-iphone" }, taxonomy), {});
   });
 
   await check("atributlar: kategoriyaga mos maydonlar, boshqarilmaydiganlar saqlanadi", () => {
-    assert.deepEqual(getAttributeKeys("laptoplar-hp"), ["cpu", "gpu", "screenSize"]);
-    assert.deepEqual(getAttributeKeys("aksessuarlar-chexollar"), ["compatibility", "material"]);
-    assert.deepEqual(getAttributeKeys("telefonlar-iphone"), []);
+    assert.deepEqual(getAttributeKeys("laptoplar-hp", "laptoplar"), ["cpu", "gpu", "screenSize"]);
+    assert.deepEqual(getAttributeKeys("aksessuarlar-chexollar", "aksessuarlar"), ["compatibility", "material"]);
+    assert.deepEqual(getAttributeKeys("telefonlar-iphone", "telefonlar"), []);
     const powerbank = allProducts.find((p) => p.attributes.capacity !== undefined)!;
     const values = productToFormValues(powerbank);
-    const built = buildProductFromInput(productInputSchema.parse(values), powerbank, powerbank.updatedAt);
+    const built = buildProductFromInput(productInputSchema.parse(values), powerbank, powerbank.updatedAt, rootOf(powerbank.categoryId));
     assert.equal(built.attributes.capacity, powerbank.attributes.capacity);
   });
 
@@ -1260,7 +1268,7 @@ async function main(): Promise<void> {
     const product = allProducts[0]!;
     const values = productToFormValues(product);
     values.images = ["/products/a/2.webp", "/products/a/1.webp", "/products/a/2.webp"];
-    const built = buildProductFromInput(productInputSchema.parse(values), product, product.updatedAt);
+    const built = buildProductFromInput(productInputSchema.parse(values), product, product.updatedAt, rootOf(product.categoryId));
     assert.deepEqual(built.images, ["/products/a/2.webp", "/products/a/1.webp"]);
     values.images = Array.from({ length: 11 }, (_, i) => `/products/a/${i}.webp`);
     const result = productInputSchema.safeParse(values);
@@ -1298,7 +1306,7 @@ async function main(): Promise<void> {
     assert.equal(copy.updatedAt, undefined);
     assert.ok(copy.variants.every((v) => v.id === undefined && v.sku === ""));
     assert.equal(copy.variants.length, source.variants.length);
-    const built = buildProductFromInput(productInputSchema.parse(copy), null, "2026-10-05T00:00:00.000Z");
+    const built = buildProductFromInput(productInputSchema.parse(copy), null, "2026-10-05T00:00:00.000Z", rootOf(copy.categoryId));
     assert.ok(built.variants.every((v) => v.id.startsWith("iphone-15-pro-max-nusxa-")));
     assert.equal(new Set(built.variants.map((v) => v.id)).size, built.variants.length);
     assert.deepEqual(built.specs, source.specs);
@@ -1447,7 +1455,7 @@ async function main(): Promise<void> {
   });
 
   await check("kategoriya tanlovi: faqat barglar, to‘liq yo‘l bilan", () => {
-    const options = getCategoryOptions();
+    const options = getCategoryOptions(categories);
     assert.equal(options.length, 25);
     assert.ok(options.some((o) => o.label === "Zaryadchiklar › Adapterlar" && o.rootName === "Aksessuarlar"));
     assert.ok(!options.some((o) => o.id === "telefonlar"));

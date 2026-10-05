@@ -9,6 +9,7 @@ import { getCategoryOptions, productToFormValues } from "@/lib/admin/product-for
 import { isDbConfigured } from "@/lib/db/supabase";
 import { formatDate } from "@/lib/format";
 import { getBrands } from "@/lib/repo/brands";
+import { getCategories } from "@/lib/repo/categories";
 import { getProductForAdmin } from "@/lib/repo/products-admin";
 import { requireAdmin } from "@/lib/admin/auth";
 
@@ -25,7 +26,7 @@ export default async function EditProductPage({ params, searchParams }: PageProp
   const { id } = await params;
   const { saqlandi } = await searchParams;
   const justSaved = saqlandi === "yangi" ? "created" : saqlandi === "1" ? "updated" : null;
-  const [product, brands] = await Promise.all([getProductForAdmin(id), getBrands()]);
+  const [product, brands, categories] = await Promise.all([getProductForAdmin(id), getBrands(), getCategories()]);
   if (!product) notFound();
 
   return (
@@ -79,7 +80,7 @@ export default async function EditProductPage({ params, searchParams }: PageProp
         mode="edit"
         initialValues={productToFormValues(product)}
         brands={brands}
-        categories={getCategoryOptions()}
+        categories={getCategoryOptions(categories)}
         canSave={isDbConfigured()}
       />
       <DeleteProductButton productId={product.id} productName={product.name} canDelete={isDbConfigured()} />
