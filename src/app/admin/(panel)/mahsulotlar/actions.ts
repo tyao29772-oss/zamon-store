@@ -2,7 +2,8 @@
 
 import { updateTag } from "next/cache";
 import { headers } from "next/headers";
-import { buildProductFromInput, flattenIssues, productInputSchema } from "@/lib/admin/product-form";
+import { redirect } from "next/navigation";
+import { applyQuickEdit, buildProductFromInput, flattenIssues, productInputSchema, quickEditSchema } from "@/lib/admin/product-form";
 import { requireAdmin } from "@/lib/admin/auth";
 import { createSignedImageUpload, IMAGE_TYPES, isOwnUploadedImage, type ImageContentType } from "@/lib/db/storage";
 import { DbError, isDbConfigured } from "@/lib/db/supabase";
@@ -11,6 +12,7 @@ import { productSchema } from "@/lib/repo/product-rows";
 import { PRODUCTS_TAG } from "@/lib/repo/products";
 import {
   getProductForAdmin,
+  deleteProduct,
   insertProduct,
   ProductConflictError,
   ProductExistsError,
@@ -23,6 +25,9 @@ export type SaveProductTarget = { kind: "create" } | { kind: "update"; id: strin
 export type SaveProductResult =
   | { ok: true; id: string; updatedAt: string; created: boolean }
   | { ok: false; error: string; fieldErrors?: Record<string, string>; conflict?: boolean };
+
+/** Saytning o‘z `public/products/` papkasidagi rasmlar (nusxa olinganda ko‘chadi). */
+const LOCAL_IMAGE = /^\/products\/[a-z0-9-]+\/[\w.-]+\.(webp|png|jpe?g|avif)$/i;
 
 export type ImageUploadResult =
   | { ok: true; uploadUrl: string; publicUrl: string }
@@ -87,7 +92,7 @@ export async function saveProductAction(target: SaveProductTarget, values: unkno
     // Rasm faqat shu mahsulotda avval bor bo‘lgan yoki o‘z papkamizga yuklangan bo‘lishi mumkin —
     // begona saytdagi rasm manzilini qo‘yib bo‘lmaydi.
     const knownImages = new Set(existing?.images ?? []);
-    const foreign = parsed.data.images.filter((url) => !knownImages.has(url) && !isOwnUploadedImage(url));
+    const foreign = parsed.data.images.filter((url) => !knownImages.has(url) && !isOwnUploadedImage(url) && !LOCAL_IMAGE.test(url));
     if (foreign.length > 0) {
       return { ok: false, error: "Rasmlardan biri noma’lum manzildan. Uni o‘chirib, qayta yuklang.", fieldErrors: { images: "Noma’lum rasm manzili" } };
     }
@@ -128,4 +133,61 @@ export async function saveProductAction(target: SaveProductTarget, values: unkno
     console.error("[admin/products] saqlashda xato:", error);
     return { ok: false, error: "Saqlashda kutilmagan xato. Internetni tekshirib, qayta urinib ko‘ring." };
   }
+}
+
+export type QuickEditResult =
+  | { ok: true; updatedAt: string }
+  | { ok: false; error: string; variantErrors?: Record<string, string>; conflict?: boolean };
+
+/** Ro‘yxatdan tez tahrir: faqat variantlarning narxi, eski narxi va qoldig‘i. */
+export async function quickEditAction(values: unknown): Promise<QuickEditResult> {
+  await requireAdmin();
+  if (!isDbConfigured()) return { ok: false, error: "Baza (Supabase) ulanmagan — saqlab bo‘lmaydi." };
+
+  const parsed = quickEditSchema.safeParse(values);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Ma’lumot noto‘g‘ri." };
+
+  try {
+    const existing = await getProductForAdmin(parsed.data.id);
+    if (!existing) return { ok: false, error: "Mahsulot topilmadi — ehtimol o‘chirilgan." };
+
+    const applied = applyQuickEdit(existing, parsed.data, new Date().toISOString());
+    if ("errors" in applied) {
+      return { ok: false, error: "Ba’zi qatorlarni tekshiring.", variantErrors: applied.errors };
+    }
+    if (!productSchema.safeParse(applied.product).success) {
+      return { ok: false, error: "Ma’lumotni saqlab bo‘lmadi: tekshiruvdan o‘tmadi." };
+    }
+    const saved = await updateProduct(applied.product, parsed.data.updatedAt);
+    updateTag(PRODUCTS_TAG);
+    return { ok: true, updatedAt: saved.updatedAt };
+  } catch (error) {
+    if (error instanceof ProductConflictError) {
+      return { ok: false, conflict: true, error: "Bu mahsulot boshqa joyda o‘zgartirilgan. Sahifani yangilab, qayta urinib ko‘ring." };
+    }
+    if (error instanceof ProductNotFoundError) return { ok: false, error: "Mahsulot topilmadi — ehtimol o‘chirilgan." };
+    console.error("[admin/products] tez tahrir:", error);
+    return { ok: false, error: "Saqlashda kutilmagan xato. Internetni tekshirib, qayta urinib ko‘ring." };
+  }
+}
+
+/** Mahsulotni butunlay o‘chiradi va ro‘yxatga qaytaradi. Buyurtmalardagi nusxa saqlanadi. */
+export async function deleteProductAction(id: string): Promise<{ ok: false; error: string }> {
+  await requireAdmin();
+  if (!isDbConfigured()) return { ok: false, error: "Baza (Supabase) ulanmagan — o‘chirib bo‘lmaydi." };
+  if (typeof id !== "string" || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(id)) return { ok: false, error: "Noto‘g‘ri mahsulot." };
+
+  let name: string;
+  try {
+    const existing = await getProductForAdmin(id);
+    if (!existing) return { ok: false, error: "Mahsulot topilmadi — ehtimol allaqachon o‘chirilgan." };
+    name = existing.name;
+    await deleteProduct(id);
+  } catch (error) {
+    if (error instanceof ProductNotFoundError) return { ok: false, error: "Mahsulot topilmadi — ehtimol allaqachon o‘chirilgan." };
+    console.error("[admin/products] o‘chirishda xato:", error);
+    return { ok: false, error: "O‘chirib bo‘lmadi. Internetni tekshirib, qayta urinib ko‘ring." };
+  }
+  updateTag(PRODUCTS_TAG);
+  redirect(`/admin/mahsulotlar?ochirildi=${encodeURIComponent(name)}`);
 }

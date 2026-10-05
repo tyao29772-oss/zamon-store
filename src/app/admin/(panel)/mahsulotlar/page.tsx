@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { ChevronLeft, ChevronRight, EyeOff, ExternalLink, PackageSearch, Pencil, Plus, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, CircleCheck, EyeOff, ExternalLink, PackageSearch, Pencil, Plus, Search } from "lucide-react";
+import { QuickEditButton, type QuickEditVariant } from "@/components/admin/QuickEditButton";
 import { ProductImage } from "@/components/product/ProductImage";
 import { StockBadge } from "@/components/product/StockBadge";
 import {
@@ -19,7 +20,21 @@ import { formatDiscount, formatNumber, formatPrice } from "@/lib/format";
 import { getBrands } from "@/lib/repo/brands";
 import { getCategories, getDescendantIds } from "@/lib/repo/categories";
 import { getAllProductsForAdmin } from "@/lib/repo/products";
+import { variantLabel } from "@/lib/admin/product-form";
+import { isDbConfigured } from "@/lib/db/supabase";
 import { productHref } from "@/lib/urls";
+import type { Product } from "@/types";
+
+function quickVariants(product: Product): QuickEditVariant[] {
+  return product.variants.map((v) => ({
+    id: v.id,
+    label: variantLabel(v),
+    colorHex: v.colorHex,
+    price: v.price,
+    oldPrice: v.oldPrice ?? null,
+    stock: v.stock,
+  }));
+}
 
 export const metadata: Metadata = { title: "Mahsulotlar" };
 
@@ -72,6 +87,8 @@ function VisibilityBadge({ published }: { published: boolean }) {
 export default async function AdminProductsPage({ searchParams }: PageProps<"/admin/mahsulotlar">) {
   await connection();
   const sp = await searchParams;
+  const deletedName = first(sp.ochirildi)?.slice(0, 200);
+  const canEdit = isDbConfigured();
   const params: Params = {
     q: first(sp.q)?.trim().slice(0, 100) || undefined,
     holat: first(sp.holat),
@@ -122,6 +139,13 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
           Yangi mahsulot
         </Link>
       </div>
+
+      {deletedName && (
+        <p role="status" className="mt-5 flex items-center gap-2 rounded-2xl border border-ok/30 bg-ok-soft p-4 text-sm font-medium text-ok">
+          <CircleCheck className="size-5 shrink-0" aria-hidden="true" />
+          «{deletedName}» o‘chirildi.
+        </p>
+      )}
 
       {/* Holat tablari */}
       <nav aria-label="Holat bo‘yicha" className="mt-6 flex gap-2 overflow-x-auto pb-1">
@@ -266,6 +290,14 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
                       </td>
                       <td className="px-4 py-3"><VisibilityBadge published={product.isPublished} /></td>
                       <td className="whitespace-nowrap px-4 py-3 text-right">
+                        <QuickEditButton
+                          productId={product.id}
+                          productName={product.name}
+                          updatedAt={product.updatedAt}
+                          variants={quickVariants(product)}
+                          canSave={canEdit}
+                          className="mr-1.5"
+                        />
                         <Link
                           href={`/admin/mahsulotlar/${product.id}`}
                           className="inline-flex items-center gap-1.5 rounded-lg bg-ink px-3 py-1.5 text-xs font-semibold text-white hover:bg-black"
@@ -310,6 +342,14 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
                       <StockBadge status={row.stockStatus} />
                       <VisibilityBadge published={product.isPublished} />
                     </div>
+                    <QuickEditButton
+                      productId={product.id}
+                      productName={product.name}
+                      updatedAt={product.updatedAt}
+                      variants={quickVariants(product)}
+                      canSave={canEdit}
+                      className="relative z-10 mt-2.5"
+                    />
                   </div>
                 </li>
               );

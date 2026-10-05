@@ -615,3 +615,78 @@ export function flattenIssues(issues: { path: PropertyKey[]; message: string }[]
   }
   return result;
 }
+
+/* ------------------------------------------------------------------ Nusxa olish */
+
+/**
+ * Mavjud mahsulotdan yangi mahsulot formasi: hamma narsa ko‘chiriladi, lekin manzil, variant
+ * id/SKU yangidan yasaladi va mahsulot avval yashirin turadi (adashib saytga chiqmasin).
+ */
+export function duplicateFormValues(product: Product): ProductFormValues {
+  const values = productToFormValues(product);
+  const name = `${product.name} (nusxa)`;
+  return {
+    ...values,
+    name,
+    slug: slugify(name),
+    isPublished: false,
+    featured: false,
+    variants: values.variants.map((v) => ({ ...v, key: newKey(), id: undefined, sku: "" })),
+    updatedAt: undefined,
+  };
+}
+
+/* ------------------------------------------------------------------ Tez tahrir (ro‘yxatdan) */
+
+/** Variantning qisqa nomi: `256GB · Qora · Yangi`. */
+export function variantLabel(v: ProductVariant): string {
+  const condition = CONDITION_OPTIONS.find((c) => c.value === v.condition)?.label ?? "";
+  return [v.storage, v.ram && `${v.ram} RAM`, v.size, v.color, condition].filter(Boolean).join(" · ") || "Asosiy variant";
+}
+
+export const quickEditSchema = z.object({
+  id: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(120),
+  updatedAt: z.string().min(1).max(60),
+  variants: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(200),
+        price: z.number().int().positive("Narx musbat bo‘lishi kerak").max(10_000_000_000),
+        oldPrice: z.number().int().positive().max(10_000_000_000).nullable(),
+        stock: z.number().int().min(0, "Qoldiq manfiy bo‘lmaydi").max(100_000),
+      }),
+    )
+    .min(1)
+    .max(200),
+});
+
+export type QuickEditInput = z.infer<typeof quickEditSchema>;
+
+/**
+ * Tez tahrirni mahsulotga qo‘llaydi. Faqat narx, eski narx va qoldiq o‘zgaradi; boshqa
+ * hech narsaga tegilmaydi. Xato bo‘lsa — `{ errors: { "<variantId>": "..." } }`.
+ */
+export function applyQuickEdit(
+  product: Product,
+  input: QuickEditInput,
+  nowIso: string,
+): { product: Product } | { errors: Record<string, string> } {
+  const byId = new Map(input.variants.map((v) => [v.id, v]));
+  const errors: Record<string, string> = {};
+  for (const id of byId.keys()) {
+    if (!product.variants.some((v) => v.id === id)) errors[id] = "Bu variant endi yo‘q — sahifani yangilang";
+  }
+  const variants = product.variants.map((v) => {
+    const change = byId.get(v.id);
+    if (!change) return v;
+    if (change.oldPrice !== null && change.oldPrice <= change.price) {
+      errors[v.id] = "Eski narx yangi narxdan katta bo‘lishi kerak (yoki uni o‘chiring)";
+    }
+    const next: ProductVariant = { ...v, price: change.price, stock: change.stock };
+    if (change.oldPrice === null) delete next.oldPrice;
+    else next.oldPrice = change.oldPrice;
+    return next;
+  });
+  if (Object.keys(errors).length > 0) return { errors };
+  return { product: { ...product, variants, updatedAt: nowIso } };
+}

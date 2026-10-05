@@ -133,6 +133,16 @@ export async function dbUpdate<Row>(table: string, query: string, patch: Record<
   return (await response.json()) as Row[];
 }
 
+/** Filtrga mos qatorlarni o‘chiradi va o‘chirilganlarini qaytaradi. */
+export async function dbDelete<Row>(table: string, query: string): Promise<Row[]> {
+  if (!query) throw new DbError("Filtrsiz o‘chirish taqiqlangan");
+  const response = await request(`${table}?${query}`, {
+    method: "DELETE",
+    headers: { Prefer: "return=representation" },
+  });
+  return (await response.json()) as Row[];
+}
+
 /** Jadvaldagi qatorlar soni. `query` — PostgREST filtri, masalan `status=eq.new`. */
 export async function dbCount(table: string, query = ""): Promise<number> {
   const response = await request(`${table}?select=*${query ? `&${query}` : ""}`, {

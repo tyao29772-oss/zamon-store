@@ -1,6 +1,6 @@
 import "server-only";
 import { allProducts } from "@/data/products";
-import { DbError, dbInsert, dbSelectAll, dbUpdate, isDbConfigured } from "@/lib/db/supabase";
+import { DbError, dbDelete, dbInsert, dbSelectAll, dbUpdate, isDbConfigured } from "@/lib/db/supabase";
 import { productToRow, rowToProduct, type ProductRow } from "@/lib/repo/product-rows";
 import { withPhotos } from "@/lib/repo/products";
 import type { Product } from "@/types";
@@ -24,6 +24,12 @@ export async function getProductForAdmin(id: string): Promise<Product | null> {
   }
   const rows = await dbSelectAll<ProductRow>(TABLE, `select=*&id=eq.${encodeURIComponent(id)}`);
   return rows[0] ? rowToProduct(rows[0]) : null;
+}
+
+/** Mahsulotni butunlay o‘chiradi. Buyurtmalarda nomi va narxi nusxa sifatida saqlangan — ular buzilmaydi. */
+export async function deleteProduct(id: string): Promise<void> {
+  const rows = await dbDelete<ProductRow>(TABLE, `id=eq.${encodeURIComponent(id)}`);
+  if (rows.length === 0) throw new ProductNotFoundError(id);
 }
 
 export async function insertProduct(product: Product): Promise<Product> {

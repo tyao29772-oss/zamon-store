@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { ChevronLeft, CircleCheck, ExternalLink, EyeOff } from "lucide-react";
+import { ChevronLeft, CircleCheck, Copy, ExternalLink, EyeOff } from "lucide-react";
+import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
 import { ProductForm } from "@/components/admin/product-form/ProductForm";
 import { getCategoryOptions, productToFormValues } from "@/lib/admin/product-form";
 import { isDbConfigured } from "@/lib/db/supabase";
@@ -26,9 +27,18 @@ export default async function EditProductPage({ params, searchParams }: PageProp
 
   return (
     <div className="max-w-6xl">
-      <Link href="/admin/mahsulotlar" className="inline-flex items-center gap-1 text-sm text-ink-muted hover:text-ink">
-        <ChevronLeft className="size-4" aria-hidden="true" /> Mahsulotlar
-      </Link>
+      <div className="flex items-center justify-between gap-3">
+        <Link href="/admin/mahsulotlar" className="inline-flex items-center gap-1 text-sm text-ink-muted hover:text-ink">
+          <ChevronLeft className="size-4" aria-hidden="true" /> Mahsulotlar
+        </Link>
+        <Link
+          href={`/admin/mahsulotlar/yangi?nusxa=${product.id}`}
+          className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-sm font-medium text-ink hover:border-ink/40"
+          title="Shu mahsulot asosida yangisini yaratish (masalan, Plus yoki Pro modeli)"
+        >
+          <Copy className="size-4" aria-hidden="true" /> Nusxa olish
+        </Link>
+      </div>
       <div className="mb-5 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
         <h1 className="text-2xl font-semibold text-ink">{product.name}</h1>
         {!product.isPublished && (
@@ -69,6 +79,7 @@ export default async function EditProductPage({ params, searchParams }: PageProp
         categories={getCategoryOptions()}
         canSave={isDbConfigured()}
       />
+      <DeleteProductButton productId={product.id} productName={product.name} canDelete={isDbConfigured()} />
     </div>
   );
 }

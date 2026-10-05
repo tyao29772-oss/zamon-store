@@ -81,6 +81,9 @@ import {
 } from "@/lib/admin/product-list";
 import {
   addMatrixVariants,
+  applyQuickEdit,
+  duplicateFormValues,
+  quickEditSchema,
   buildProductFromInput,
   emptyFormValues,
   flattenIssues,
@@ -1272,6 +1275,42 @@ async function main(): Promise<void> {
       if (saved.key === undefined) delete process.env.SUPABASE_SECRET_KEY;
       else process.env.SUPABASE_SECRET_KEY = saved.key;
     }
+  });
+
+  await check("nusxa olish: yangi manzil, variant id/SKU bo‘sh, yashirin, boshqa hammasi ko‘chadi", () => {
+    const source = allProducts.find((p) => p.slug === "iphone-15-pro-max")!;
+    const copy = duplicateFormValues(source);
+    assert.equal(copy.name, "iPhone 15 Pro Max (nusxa)");
+    assert.equal(copy.slug, "iphone-15-pro-max-nusxa");
+    assert.equal(copy.isPublished, false);
+    assert.equal(copy.updatedAt, undefined);
+    assert.ok(copy.variants.every((v) => v.id === undefined && v.sku === ""));
+    assert.equal(copy.variants.length, source.variants.length);
+    const built = buildProductFromInput(productInputSchema.parse(copy), null, "2026-10-05T00:00:00.000Z");
+    assert.ok(built.variants.every((v) => v.id.startsWith("iphone-15-pro-max-nusxa-")));
+    assert.equal(new Set(built.variants.map((v) => v.id)).size, built.variants.length);
+    assert.deepEqual(built.specs, source.specs);
+    assert.ok(productSchema.safeParse(built).success);
+  });
+
+  await check("tez tahrir: faqat narx/chegirma/qoldiq o‘zgaradi, xatolar variantga bog‘lanadi", () => {
+    const product = allProducts.find((p) => p.slug === "iphone-15-pro-max")!;
+    const [a, b] = product.variants;
+    const input = (changes: { id: string; price: number; oldPrice: number | null; stock: number }[]) =>
+      quickEditSchema.parse({ id: product.id, updatedAt: product.updatedAt, variants: changes });
+    const done = applyQuickEdit(product, input([{ id: a!.id, price: 14_000_000, oldPrice: null, stock: 7 }]), "2026-10-05T00:00:00.000Z");
+    assert.ok("product" in done);
+    const changed = done.product.variants[0]!;
+    assert.equal(changed.price, 14_000_000);
+    assert.equal(changed.stock, 7);
+    assert.equal(changed.oldPrice, undefined, "chegirma olib tashlandi");
+    assert.equal(changed.color, a!.color);
+    assert.deepEqual(done.product.variants.slice(1), product.variants.slice(1));
+    assert.equal(done.product.name, product.name);
+    assert.ok(productSchema.safeParse(done.product).success);
+    const bad = applyQuickEdit(product, input([{ id: b!.id, price: 5_000_000, oldPrice: 4_000_000, stock: 1 }, { id: "yoq-variant", price: 1, oldPrice: null, stock: 0 }]), "x");
+    assert.ok("errors" in bad && bad.errors[b!.id] && bad.errors["yoq-variant"]);
+    assert.equal(quickEditSchema.safeParse({ id: product.id, updatedAt: "x", variants: [{ id: a!.id, price: 1, oldPrice: null, stock: -1 }] }).success, false);
   });
 
   await check("kategoriya tanlovi: faqat barglar, to‘liq yo‘l bilan", () => {
