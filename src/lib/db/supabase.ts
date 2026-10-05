@@ -111,6 +111,15 @@ export async function dbInsertQuiet(table: string, row: Record<string, unknown>)
   });
 }
 
+/**
+ * Faqat o‘qiydigan (`stable`) SQL funksiyani chaqiradi: `GET /rpc/<nom>?param=...`.
+ * O‘qish bo‘lgani uchun uzilishda bir marta qayta urinadi.
+ */
+export async function dbRpcRead<Result>(fn: string, params: Record<string, string>): Promise<Result> {
+  const response = await request(`rpc/${fn}?${new URLSearchParams(params)}`, { method: "GET" });
+  return JSON.parse(response.body) as Result;
+}
+
 /** Supabase bitta javobda ko‘pi bilan shuncha qator beradi (Data API `max_rows`). */
 const PAGE_SIZE = 1000;
 

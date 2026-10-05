@@ -110,6 +110,7 @@ import { buildOrderNotification } from "@/lib/telegram-bot";
 import { getServerEnv } from "@/config/env";
 import { store } from "@/data/store";
 import { mergeStoreSettings, paragraphsToText, pickStoreSettings, storeSettingsSchema, textToParagraphs } from "@/lib/settings/store-settings";
+import { fillDays, getStatsRange, parsePeriod, percentChange, ratePercent, zonedDay, zonedMidnight } from "@/lib/admin/stats";
 import { DEFAULT_HOME, homeSettingsSchema, isSafeHref, mergeHomeSettings } from "@/lib/settings/home-settings";
 import type { Order, Product, ProductVariant } from "@/types";
 
@@ -1460,6 +1461,37 @@ async function main(): Promise<void> {
     assert.equal(options.length, 25);
     assert.ok(options.some((o) => o.label === "Zaryadchiklar › Adapterlar" && o.rootName === "Aksessuarlar"));
     assert.ok(!options.some((o) => o.id === "telefonlar"));
+  });
+
+  await check("statistika: Toshkent kuni va davr chegaralari", () => {
+    // 2026-10-04 20:30 UTC = Toshkentda 5-oktabr 01:30
+    const now = new Date("2026-10-04T20:30:00Z");
+    assert.equal(zonedDay(now), "2026-10-05");
+    assert.equal(zonedMidnight(now).toISOString(), "2026-10-04T19:00:00.000Z");
+    const today = getStatsRange(1, now);
+    assert.equal(today.from.toISOString(), "2026-10-04T19:00:00.000Z");
+    assert.deepEqual(today.days, ["2026-10-05"]);
+    assert.equal(today.previousTo.getTime(), now.getTime() - 86_400_000);
+    const week = getStatsRange(7, now);
+    assert.equal(week.days.length, 7);
+    assert.equal(week.days[0], "2026-09-29");
+    assert.equal(week.days[6], "2026-10-05");
+    assert.equal(week.previousFrom.toISOString(), "2026-09-21T19:00:00.000Z");
+    assert.equal(getStatsRange(90, now).days.length, 90);
+  });
+
+  await check("statistika: davr, bo‘sh kunlar, foizlar", () => {
+    assert.equal(parsePeriod("7").days, 7);
+    assert.equal(parsePeriod("bugun").days, 1);
+    assert.equal(parsePeriod("xyz").key, "30");
+    assert.equal(parsePeriod(undefined).key, "30");
+    const filled = fillDays(["2026-10-01", "2026-10-02"], [{ day: "2026-10-02", visitors: 3, views: 5, orders: 1, revenue: 100 }]);
+    assert.deepEqual(filled.map((d) => d.visitors), [0, 3]);
+    assert.equal(percentChange(150, 100), 50);
+    assert.equal(percentChange(50, 100), -50);
+    assert.equal(percentChange(5, 0), null);
+    assert.equal(ratePercent(1, 3), 33.3);
+    assert.equal(ratePercent(1, 0), 0);
   });
 
   await check("bosh sahifa: standartlar to‘g‘ri, mahsulotlar mavjud", async () => {

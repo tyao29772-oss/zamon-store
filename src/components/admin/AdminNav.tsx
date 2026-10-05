@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FolderTree, House, LayoutDashboard, Package, Settings, ShoppingBag, Tags, type LucideIcon } from "lucide-react";
+import { ChartColumn, FolderTree, House, LayoutDashboard, Package, Settings, ShoppingBag, Tags, type LucideIcon } from "lucide-react";
 
 interface NavItem {
   label: string;
@@ -15,6 +15,7 @@ interface NavItem {
 const ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard, ready: true },
   { label: "Buyurtmalar", href: "/admin/buyurtmalar", icon: ShoppingBag, ready: true },
+  { label: "Statistika", href: "/admin/statistika", icon: ChartColumn, ready: true },
   { label: "Mahsulotlar", href: "/admin/mahsulotlar", icon: Package, ready: true },
   { label: "Kategoriyalar", href: "/admin/kategoriyalar", icon: FolderTree, ready: true },
   { label: "Brendlar", href: "/admin/brendlar", icon: Tags, ready: true },

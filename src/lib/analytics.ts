@@ -1,3 +1,4 @@
+import { ADMIN_HINT_COOKIE } from "@/lib/admin/hint";
 import type { EventName, EventValue } from "@/types";
 
 /**
@@ -23,6 +24,8 @@ function getSessionId(): string {
 
 export function trackEvent(name: EventName, payload: Record<string, EventValue> = {}): void {
   if (typeof window === "undefined") return;
+  // Do‘kon egasining o‘z ko‘rishlari statistikani buzmasin.
+  if (document.cookie.split("; ").some((c) => c.startsWith(`${ADMIN_HINT_COOKIE}=`))) return;
 
   try {
     const body = JSON.stringify({ name, sessionId: getSessionId(), payload });
