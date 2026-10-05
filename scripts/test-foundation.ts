@@ -110,6 +110,8 @@ import { buildOrderNotification } from "@/lib/telegram-bot";
 import { getServerEnv } from "@/config/env";
 import { store } from "@/data/store";
 import { mergeStoreSettings, paragraphsToText, pickStoreSettings, storeSettingsSchema, textToParagraphs } from "@/lib/settings/store-settings";
+import { buildBackup, formatExportTime, ordersSheet, productsSheet, validateBackup } from "@/lib/admin/export";
+import { buildXlsx, columnName, crc32 } from "@/lib/admin/xlsx";
 import { fillDays, getStatsRange, parsePeriod, percentChange, ratePercent, zonedDay, zonedMidnight } from "@/lib/admin/stats";
 import { DEFAULT_HOME, homeSettingsSchema, isSafeHref, mergeHomeSettings } from "@/lib/settings/home-settings";
 import type { Order, Product, ProductVariant } from "@/types";
@@ -1461,6 +1463,57 @@ async function main(): Promise<void> {
     assert.equal(options.length, 25);
     assert.ok(options.some((o) => o.label === "Zaryadchiklar › Adapterlar" && o.rootName === "Aksessuarlar"));
     assert.ok(!options.some((o) => o.id === "telefonlar"));
+  });
+
+  await check("excel: zip va crc to‘g‘ri, matn formula bo‘lmaydi", async () => {
+    // Ma’lum CRC32: "123456789" → CBF43926
+    assert.equal(crc32(new TextEncoder().encode("123456789")).toString(16), "cbf43926");
+    assert.equal(columnName(0), "A");
+    assert.equal(columnName(25), "Z");
+    assert.equal(columnName(26), "AA");
+    const file = buildXlsx({
+      name: "Sinov",
+      columns: [{ header: "Matn" }, { header: "Son" }],
+      rows: [["=HYPERLINK(\"x\") & <b> O‘zbek ʻ", 14500000], [null, 0], ["a\u0001b", Number.NaN]],
+    });
+    assert.equal(file.readUInt32LE(0), 0x04034b50, "ZIP boshi");
+    // Fayllarni ZIP'dan o‘qib, ichini tekshiramiz.
+    const { inflateRawSync } = await import("node:zlib");
+    const entries = new Map<string, string>();
+    for (let at = 0; file.readUInt32LE(at) === 0x04034b50; ) {
+      const size = file.readUInt32LE(at + 18);
+      const nameLength = file.readUInt16LE(at + 26);
+      const name = file.subarray(at + 30, at + 30 + nameLength).toString();
+      const data = inflateRawSync(file.subarray(at + 30 + nameLength, at + 30 + nameLength + size));
+      assert.equal(crc32(data), file.readUInt32LE(at + 14), `crc: ${name}`);
+      entries.set(name, data.toString("utf8"));
+      at += 30 + nameLength + size;
+    }
+    assert.deepEqual([...entries.keys()].sort(), ["[Content_Types].xml", "_rels/.rels", "xl/_rels/workbook.xml.rels", "xl/styles.xml", "xl/workbook.xml", "xl/worksheets/sheet1.xml"]);
+    const sheet = entries.get("xl/worksheets/sheet1.xml")!;
+    assert.ok(sheet.includes("=HYPERLINK(&quot;x&quot;) &amp; &lt;b&gt; O‘zbek ʻ"), "matn qochirildi, inline");
+    assert.ok(!sheet.includes("<f>"), "formula yo‘q");
+    assert.ok(sheet.includes('<c r="B2"><v>14500000</v></c>'), "son raqam sifatida");
+    assert.ok(sheet.includes("ab"), "boshqaruv belgisi olib tashlandi");
+    assert.ok(!sheet.includes("NaN"));
+  });
+
+  await check("eksport: varaqlar va zaxira tekshiruvi", () => {
+    const sample = allProducts.slice(0, 3);
+    const sheet = productsSheet(sample, { brands: new Map(), categories: new Map() }, "https://misol.uz");
+    assert.equal(sheet.rows.length, sample.reduce((n, p) => n + p.variants.length, 0));
+    assert.ok(sheet.rows.every((r) => r.length === sheet.columns.length));
+    assert.ok(String(sheet.rows[0]![9]).startsWith("https://misol.uz/mahsulot/"));
+    assert.equal(formatExportTime("2026-10-04T20:30:00Z"), "2026-10-05 01:30");
+    const order = { id: "QP-000001", productId: "p", variantId: "v", productName: "iPhone", variantLabel: "256 GB", price: 100, customerName: "Ali", phone: "+998901234567", status: "done", source: "site", createdAt: "2026-10-04T20:30:00Z" } as Order;
+    assert.deepEqual(ordersSheet([order]).rows[0]!.slice(0, 3), ["QP-000001", "2026-10-05 01:30", "Bajarildi"]);
+    const tables = { brands: [], categories: [], products: [{ id: "a" }], settings: [], orders: [] };
+    const backup = buildBackup("Do‘kon", tables);
+    assert.equal(backup.counts.products, 1);
+    assert.ok(validateBackup(JSON.parse(JSON.stringify(backup))).ok);
+    assert.ok(!validateBackup({ format: "boshqa" }).ok);
+    assert.ok(!validateBackup({ ...backup, version: 99 }).ok);
+    assert.ok(!validateBackup({ ...backup, tables: { ...tables, orders: [1] } }).ok);
   });
 
   await check("statistika: Toshkent kuni va davr chegaralari", () => {

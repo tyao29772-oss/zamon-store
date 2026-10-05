@@ -73,6 +73,7 @@ Hech biri sirli qilib `NEXT_PUBLIC_` bilan boshlanmaydi — token/chat ID faqat 
 | `npm run db:check` | Supabase ulanishi, kalit va jadvallarni tekshiradi (kalitni ekranga chiqarmaydi) |
 | `npm run db:seed-products` | Kod fayllaridagi mahsulotlarni bazaga ko‘chiradi (mavjudlariga tegmaydi; `-- --force` — ustidan yozadi) |
 | `npm run db:seed-taxonomy` | Standart brend va kategoriyalarni bazaga ko‘chiradi (mavjudlariga tegmaydi) |
+| `npm run db:restore -- fayl.json` | Admin paneldagi «Zaxira» faylidan bazani tiklaydi: avval farqni ko‘rsatadi, `--yes` bilan yozadi (`--with-orders` — buyurtmalarni bo‘sh jadvalga) |
 | `npm run images` | `public/products/` dagi rasmlarni mahsulotlarga bog‘laydi + hisobot |
 
 Yangi kod yuborishdan oldin tavsiya etilgan tartib:

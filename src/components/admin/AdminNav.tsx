@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChartColumn, FolderTree, House, LayoutDashboard, Package, Settings, ShoppingBag, Tags, type LucideIcon } from "lucide-react";
+import { ChartColumn, DatabaseBackup, FolderTree, House, LayoutDashboard, Package, Settings, ShoppingBag, Tags, type LucideIcon } from "lucide-react";
 
 interface NavItem {
   label: string;
@@ -21,6 +21,7 @@ const ITEMS: NavItem[] = [
   { label: "Brendlar", href: "/admin/brendlar", icon: Tags, ready: true },
   { label: "Bosh sahifa", href: "/admin/bosh-sahifa", icon: House, ready: true },
   { label: "Sozlamalar", href: "/admin/sozlamalar", icon: Settings, ready: true },
+  { label: "Zaxira", href: "/admin/zaxira", icon: DatabaseBackup, ready: true },
 ];
 
 function isActive(pathname: string, href: string): boolean {
