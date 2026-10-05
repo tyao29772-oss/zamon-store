@@ -15,7 +15,11 @@ export async function sendTestTelegramAction(): Promise<{ ok: boolean; message: 
     text: "✅ <b>Zamon Store</b>: bot to‘g‘ri sozlangan.\nYangi buyurtmalar shu chatga keladi.",
     buttons: [],
   });
-  if (result.ok) return { ok: true, message: "Xabar yuborildi — Telegram'ni tekshiring." };
+  if (result.ok) {
+    return result.failed > 0
+      ? { ok: true, message: `${result.sent} ta chatga yuborildi, ${result.failed} tasiga yetmadi — chat ID'larni tekshiring.` }
+      : { ok: true, message: result.sent > 1 ? `${result.sent} ta chatga yuborildi — Telegram'ni tekshiring.` : "Xabar yuborildi — Telegram'ni tekshiring." };
+  }
   if (result.reason === "not_configured") return { ok: false, message: "Bot sozlanmagan: TELEGRAM_BOT_TOKEN va TELEGRAM_ADMIN_CHAT_ID kerak." };
   if (result.reason === "network") return { ok: false, message: "Telegram'ga ulanib bo‘lmadi. Internetni tekshiring." };
   const detail = result.detail ?? "";

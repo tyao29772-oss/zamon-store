@@ -21,6 +21,7 @@ function readEnv() {
   return values;
 }
 
+async function main() {
 const env = readEnv();
 const token = env.TELEGRAM_BOT_TOKEN;
 
@@ -28,28 +29,37 @@ if (!token) {
   console.log("✗ .env.local da TELEGRAM_BOT_TOKEN yo‘q.");
   console.log("  Telegram'da @BotFather → /newbot → nom va username bering → berilgan tokenni");
   console.log("  .env.local dagi «TELEGRAM_BOT_TOKEN=» qatoriga joylang va qayta ishga tushiring.");
-  process.exit(1);
+  return 1;
 }
 if (!/^\d{6,12}:[A-Za-z0-9_-]{30,}$/.test(token)) {
   console.log("✗ TELEGRAM_BOT_TOKEN ko‘rinishi noto‘g‘ri (123456789:AA... bo‘lishi kerak). Bo‘sh joy yoki qo‘shtirnoq qolmaganini tekshiring.");
-  process.exit(1);
+  return 1;
 }
 
 async function api(method, body) {
-  const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
-    method: body ? "POST" : "GET",
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(15_000),
-  });
-  const data = await response.json().catch(() => ({ ok: false, description: `HTTP ${response.status}` }));
-  return data;
+  // Internet beqaror bo‘lsa — 3 martagacha urinadi.
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+        method: body ? "POST" : "GET",
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(20_000),
+      });
+      return await response.json().catch(() => ({ ok: false, description: `HTTP ${response.status}` }));
+    } catch (error) {
+      if (attempt >= 3) {
+        return { ok: false, description: `Telegram'ga ulanib bo‘lmadi (${error?.cause?.code ?? error?.name ?? "tarmoq"}). Internetni tekshirib, qayta urinib ko‘ring.` };
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
+    }
+  }
 }
 
 const me = await api("getMe");
 if (!me.ok) {
   console.log(`✗ Token ishlamadi: ${me.description ?? "noma’lum xato"}. @BotFather'dan tokenni qayta nusxalang.`);
-  process.exit(1);
+  return 1;
 }
 console.log(`✓ Bot topildi: ${me.result.first_name} (@${me.result.username})`);
 
@@ -57,17 +67,17 @@ if (args.has("--test")) {
   const chatId = env.TELEGRAM_ADMIN_CHAT_ID;
   if (!chatId) {
     console.log("✗ TELEGRAM_ADMIN_CHAT_ID yo‘q. Avval: npm run telegram:setup -- --write");
-    process.exit(1);
+    return 1;
   }
   const sent = await api("sendMessage", { chat_id: chatId, text: "✅ Zamon Store: bot to‘g‘ri sozlangan. Yangi buyurtmalar shu chatga keladi." });
   console.log(sent.ok ? `✓ Sinov xabari yuborildi (chat ${chatId}) — Telegram'ni tekshiring.` : `✗ Yuborilmadi: ${sent.description}`);
-  process.exit(sent.ok ? 0 : 1);
+  return sent.ok ? 0 : 1;
 }
 
 const updates = await api("getUpdates");
 if (!updates.ok) {
   console.log(`✗ Xabarlarni o‘qib bo‘lmadi: ${updates.description}`);
-  process.exit(1);
+  return 1;
 }
 
 const chats = new Map();
@@ -85,7 +95,7 @@ if (chats.size === 0) {
   console.log(`  1) Telegram'da https://t.me/${me.result.username} ni oching`);
   console.log("  2) «Start» (yoki /start) ni bosing");
   console.log("  3) Shu buyruqni qayta ishga tushiring");
-  process.exit(1);
+  return 1;
 }
 
 console.log("\nBotga yozganlar:");
@@ -96,7 +106,7 @@ for (const c of chats.values()) {
 if (args.has("--write")) {
   if (chats.size !== 1) {
     console.log("\n✗ Bir nechta chat bor — qaysi biri sizniki ekanini aniqlab, ID'ni .env.local ga qo‘lda yozing.");
-    process.exit(1);
+    return 1;
   }
   const [only] = chats.values();
   let content = readFileSync(ENV_FILE, "utf8");
@@ -107,3 +117,8 @@ if (args.has("--write")) {
   console.log(`\n✓ .env.local ga yozildi: TELEGRAM_ADMIN_CHAT_ID=${only.id}`);
   console.log("  Endi sinab ko‘ring: npm run telegram:setup -- --test");
 }
+  return 0;
+}
+
+// process.exit() Windows'da ochiq tarmoq ulanishlari bilan to'qnashadi — faqat exitCode beriladi.
+process.exitCode = await main();

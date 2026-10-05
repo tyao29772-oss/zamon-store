@@ -27,7 +27,11 @@ export const publicEnv = {
 
 export interface ServerEnv {
   telegramBotToken: string | null;
-  telegramAdminChatId: string | null;
+  /**
+   * Xabar oluvchilar: bir yoki bir nechta chat ID (vergul bilan), masalan egasi va sotuvchi
+   * yoki xodimlar guruhi. Noto‘g‘ri yozilganlari tashlab yuboriladi.
+   */
+  telegramAdminChatIds: string[];
   /** Bot orqali adminga xabar yuborish uchun ikkala qiymat ham kerak. */
   telegramBotEnabled: boolean;
 }
@@ -78,10 +82,18 @@ export function getSupabaseEnv(): SupabaseEnv | null {
 /** Faqat serverda chaqiriladi. Klient komponentlardan import qilinmaydi. */
 export function getServerEnv(): ServerEnv {
   const token = process.env.TELEGRAM_BOT_TOKEN?.trim() || null;
-  const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID?.trim() || null;
+  const chatIds = [
+    ...new Set(
+      (process.env.TELEGRAM_ADMIN_CHAT_ID ?? "")
+        .split(/[,\s]+/)
+        .map((id) => id.trim())
+        // Shaxsiy chat/guruh ID (manfiy bo‘lishi mumkin) yoki ommaviy kanal @username.
+        .filter((id) => /^-?\d{4,20}$|^@[A-Za-z0-9_]{5,32}$/.test(id)),
+    ),
+  ];
   return {
     telegramBotToken: token,
-    telegramAdminChatId: chatId,
-    telegramBotEnabled: Boolean(token && chatId),
+    telegramAdminChatIds: chatIds,
+    telegramBotEnabled: Boolean(token && chatIds.length > 0),
   };
 }

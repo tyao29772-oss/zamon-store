@@ -104,6 +104,7 @@ import {
 } from "@/lib/admin/order-list";
 import { productSchema, productToRow, rowToProduct } from "@/lib/repo/product-rows";
 import { buildOrderNotification } from "@/lib/telegram-bot";
+import { getServerEnv } from "@/config/env";
 import type { Order, Product, ProductVariant } from "@/types";
 
 let passed = 0;
@@ -1365,6 +1366,23 @@ async function main(): Promise<void> {
     assert.ok(message.text.includes("14 500 000"));
     assert.deepEqual(message.buttons, [], "localhost — tugma yo‘q");
     assert.ok(message.text.includes("Havola: http://localhost:3000/mahsulot/"), "havola matnda");
+  });
+
+  await check("TELEGRAM_ADMIN_CHAT_ID: bir nechta ID, guruh, takror va xato yozilganlar", () => {
+    const saved = { token: process.env.TELEGRAM_BOT_TOKEN, chat: process.env.TELEGRAM_ADMIN_CHAT_ID };
+    try {
+      process.env.TELEGRAM_BOT_TOKEN = "123456:abc";
+      process.env.TELEGRAM_ADMIN_CHAT_ID = " 111222333, -1001234567890 ,111222333, xato, 12 ";
+      assert.deepEqual(getServerEnv().telegramAdminChatIds, ["111222333", "-1001234567890"]);
+      assert.equal(getServerEnv().telegramBotEnabled, true);
+      process.env.TELEGRAM_ADMIN_CHAT_ID = "xato";
+      assert.equal(getServerEnv().telegramBotEnabled, false, "yaroqli ID bo‘lmasa — o‘chiq");
+    } finally {
+      for (const [k, v] of [["TELEGRAM_BOT_TOKEN", saved.token], ["TELEGRAM_ADMIN_CHAT_ID", saved.chat]] as const) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
   });
 
   await check("bog‘lanish havolalari", () => {

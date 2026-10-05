@@ -54,19 +54,19 @@ export function buildOrderNotification(order: Order): TelegramMessage {
   return { text: lines.join("\n"), buttons };
 }
 
-export type SendResult = { ok: true } | { ok: false; reason: "not_configured" | "telegram_error" | "network"; detail?: string };
+export type SendResult =
+  | { ok: true; sent: number; failed: number }
+  | { ok: false; reason: "not_configured" | "telegram_error" | "network"; detail?: string };
 
-/** Admin chatiga xabar yuboradi. Xato bo‘lsa — natija qaytaradi, otmaydi. */
-export async function sendAdminTelegram(message: TelegramMessage): Promise<SendResult> {
-  const env = getServerEnv();
-  if (!env.telegramBotEnabled) return { ok: false, reason: "not_configured" };
+type ChatResult = { ok: true } | { ok: false; reason: "telegram_error" | "network"; detail?: string };
 
+async function sendToChat(token: string, chatId: string, message: TelegramMessage): Promise<ChatResult> {
   try {
-    const response = await fetch(`https://api.telegram.org/bot${env.telegramBotToken}/sendMessage`, {
+    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chat_id: env.telegramAdminChatId,
+        chat_id: chatId,
         text: message.text,
         parse_mode: "HTML",
         link_preview_options: { is_disabled: true },
@@ -77,14 +77,29 @@ export async function sendAdminTelegram(message: TelegramMessage): Promise<SendR
     if (!response.ok) {
       // Javobda token bo‘lmaydi; Telegram xato tavsifi (masalan, «chat not found») log uchun.
       const detail = (await response.text()).slice(0, 300);
-      console.error(`[telegram-bot] xabar yuborilmadi (${response.status}):`, detail);
+      console.error(`[telegram-bot] ${chatId} ga yuborilmadi (${response.status}):`, detail);
       return { ok: false, reason: "telegram_error", detail };
     }
     return { ok: true };
   } catch (error) {
-    console.error("[telegram-bot] xabar yuborishda xato:", error instanceof Error ? error.message : error);
+    console.error(`[telegram-bot] ${chatId} ga yuborishda xato:`, error instanceof Error ? error.message : error);
     return { ok: false, reason: "network" };
   }
+}
+
+/**
+ * Barcha admin chatlariga (TELEGRAM_ADMIN_CHAT_ID — vergul bilan bir nechta) parallel yuboradi.
+ * Kamida bittasiga yetib borsa — muvaffaqiyat. Xato bo‘lsa natija qaytaradi, otmaydi.
+ */
+export async function sendAdminTelegram(message: TelegramMessage): Promise<SendResult> {
+  const env = getServerEnv();
+  if (!env.telegramBotEnabled || !env.telegramBotToken) return { ok: false, reason: "not_configured" };
+
+  const results = await Promise.all(env.telegramAdminChatIds.map((id) => sendToChat(env.telegramBotToken!, id, message)));
+  const sent = results.filter((r) => r.ok).length;
+  if (sent > 0) return { ok: true, sent, failed: results.length - sent };
+  const firstError = results.find((r): r is Extract<ChatResult, { ok: false }> => !r.ok)!;
+  return { ok: false, reason: firstError.reason, detail: firstError.detail };
 }
 
 export async function notifyAdminAboutOrder(order: Order): Promise<void> {
