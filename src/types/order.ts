@@ -17,4 +17,10 @@ export interface Order {
   status: OrderStatus;
   source: "site";
   createdAt: string;
+  /** Oxirgi o‘zgarish (holat, izoh). Lokal rejimda bo‘lmasligi mumkin. */
+  updatedAt?: string;
+  /** Faqat admin ko‘radigan izoh. */
+  adminNote?: string;
+  /** «Bajarildi» bo‘lganda qoldiqdan 1 dona ayirilganmi. */
+  stockDeducted?: boolean;
 }

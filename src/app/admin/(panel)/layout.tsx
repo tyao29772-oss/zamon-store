@@ -6,9 +6,11 @@ import { AdminNav } from "@/components/admin/AdminNav";
 import { LogoMark } from "@/components/brand/Logo";
 import { siteConfig } from "@/config/site";
 import { requireAdmin } from "@/lib/admin/auth";
+import { countNewOrders } from "@/lib/repo/orders";
 
 export default async function AdminPanelLayout({ children }: { children: ReactNode }) {
   await requireAdmin();
+  const newOrders = await countNewOrders();
 
   return (
     <div className="lg:grid lg:min-h-dvh lg:grid-cols-[248px_1fr]">
@@ -30,7 +32,7 @@ export default async function AdminPanelLayout({ children }: { children: ReactNo
         </div>
 
         <div className="mt-4 lg:mt-0 lg:flex-1">
-          <AdminNav />
+          <AdminNav badges={{ "/admin/buyurtmalar": newOrders }} />
         </div>
 
         <div className="hidden space-y-1 border-t border-dark-line pt-4 lg:block">

@@ -8,7 +8,12 @@ import { getSupabaseEnv, type SupabaseEnv } from "@/config/env";
  * (`server-only` — klient kodiga import qilinsa build xato beradi).
  */
 
-const TIMEOUT_MS = 8000;
+/**
+ * Kutish chegaralari. O‘qish uzoqroq: bepul Supabase va sekin internetda (yoki build paytida
+ * bir vaqtda ko‘p sahifa) 140 KB katalog bir necha soniya kelishi mumkin. Yozish qisqaroq.
+ */
+const READ_TIMEOUT_MS = 20_000;
+const WRITE_TIMEOUT_MS = 10_000;
 
 export class DbError extends Error {
   constructor(
@@ -38,16 +43,24 @@ function authHeaders(env: SupabaseEnv): Record<string, string> {
   return headers;
 }
 
-async function request(path: string, init: RequestInit & { headers?: Record<string, string> }): Promise<Response> {
+interface DbResponse {
+  headers: Headers;
+  /** Javob matni (HEAD uchun bo‘sh). Kutish chegarasi uni to‘liq o‘qishni ham qamraydi. */
+  body: string;
+}
+
+async function send(path: string, init: RequestInit & { headers?: Record<string, string> }, timeoutMs: number): Promise<DbResponse> {
   const env = requireEnv();
   let response: Response;
+  let body: string;
   try {
     response = await fetch(`${env.url}/rest/v1/${path}`, {
       ...init,
       headers: { ...authHeaders(env), ...init.headers },
       cache: "no-store",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
+    body = init.method === "HEAD" ? "" : await response.text();
   } catch (error) {
     // Next'ning ichki signallari (masalan, prerender paytida dinamik so‘rov) xato emas — uzatiladi.
     unstable_rethrow(error);
@@ -55,10 +68,26 @@ async function request(path: string, init: RequestInit & { headers?: Record<stri
   }
   if (!response.ok) {
     // Javob matni log uchun — kalit unda bo‘lmaydi.
-    const detail = await response.text().catch(() => "");
-    throw new DbError(`Supabase ${response.status}: ${detail.slice(0, 300)}`, response.status);
+    throw new DbError(`Supabase ${response.status}: ${body.slice(0, 300)}`, response.status);
   }
-  return response;
+  return { headers: response.headers, body };
+}
+
+/**
+ * O‘qish (GET/HEAD) tarmoq uzilishi, kutish tugashi yoki 5xx da bir marta qayta yuboriladi.
+ * Yozish qayta yuborilmaydi — buyurtma ikki marta tushib qolmasin.
+ */
+async function request(path: string, init: RequestInit & { headers?: Record<string, string> }): Promise<DbResponse> {
+  const isRead = init.method === "GET" || init.method === "HEAD";
+  const timeoutMs = isRead ? READ_TIMEOUT_MS : WRITE_TIMEOUT_MS;
+  try {
+    return await send(path, init, timeoutMs);
+  } catch (error) {
+    const retriable = error instanceof DbError && (error.status === undefined || error.status >= 500);
+    if (!isRead || !retriable) throw error;
+    console.warn(`[db] o‘qish qayta urinilmoqda: ${(error as Error).message}`);
+    return send(path, init, timeoutMs);
+  }
 }
 
 /** Bitta qator qo‘shadi va bazadagi to‘liq qatorni (masalan, yaratilgan `id` bilan) qaytaradi. */
@@ -68,7 +97,7 @@ export async function dbInsert<Row>(table: string, row: Record<string, unknown>)
     headers: { "Content-Type": "application/json", Prefer: "return=representation" },
     body: JSON.stringify(row),
   });
-  const rows = (await response.json()) as Row[];
+  const rows = JSON.parse(response.body) as Row[];
   if (!rows[0]) throw new DbError(`"${table}" ga yozildi, lekin qator qaytmadi`);
   return rows[0];
 }
@@ -96,7 +125,7 @@ export async function dbSelectAll<Row>(table: string, query: string): Promise<Ro
       method: "GET",
       headers: { Range: `${from}-${from + PAGE_SIZE - 1}`, "Range-Unit": "items" },
     });
-    const page = (await response.json()) as Row[];
+    const page = JSON.parse(response.body) as Row[];
     rows.push(...page);
     if (page.length < PAGE_SIZE) return rows;
   }
@@ -130,7 +159,7 @@ export async function dbUpdate<Row>(table: string, query: string, patch: Record<
     headers: { "Content-Type": "application/json", Prefer: "return=representation" },
     body: JSON.stringify(patch),
   });
-  return (await response.json()) as Row[];
+  return JSON.parse(response.body) as Row[];
 }
 
 /** Filtrga mos qatorlarni o‘chiradi va o‘chirilganlarini qaytaradi. */
@@ -140,7 +169,7 @@ export async function dbDelete<Row>(table: string, query: string): Promise<Row[]
     method: "DELETE",
     headers: { Prefer: "return=representation" },
   });
-  return (await response.json()) as Row[];
+  return JSON.parse(response.body) as Row[];
 }
 
 /** Jadvaldagi qatorlar soni. `query` — PostgREST filtri, masalan `status=eq.new`. */

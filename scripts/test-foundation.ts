@@ -94,8 +94,16 @@ import {
   productToFormValues,
   slugify,
 } from "@/lib/admin/product-form";
+import {
+  countOrderTabs,
+  filterOrders,
+  formatOrderTime,
+  parseOrderTab,
+  phoneCallHref,
+  telegramChatHref,
+} from "@/lib/admin/order-list";
 import { productSchema, productToRow, rowToProduct } from "@/lib/repo/product-rows";
-import type { Product, ProductVariant } from "@/types";
+import type { Order, Product, ProductVariant } from "@/types";
 
 let passed = 0;
 const failures: string[] = [];
@@ -1311,6 +1319,46 @@ async function main(): Promise<void> {
     const bad = applyQuickEdit(product, input([{ id: b!.id, price: 5_000_000, oldPrice: 4_000_000, stock: 1 }, { id: "yoq-variant", price: 1, oldPrice: null, stock: 0 }]), "x");
     assert.ok("errors" in bad && bad.errors[b!.id] && bad.errors["yoq-variant"]);
     assert.equal(quickEditSchema.safeParse({ id: product.id, updatedAt: "x", variants: [{ id: a!.id, price: 1, oldPrice: null, stock: -1 }] }).success, false);
+  });
+
+  section("Admin: buyurtmalar");
+
+  const orderFixtures: Order[] = [
+    { id: "QP-000003", productId: "p", variantId: "v", productName: "iPhone 15 Pro Max", variantLabel: "256GB · Qora", price: 14_500_000, customerName: "Ali Valiyev", phone: "+998901234567", note: "Chilonzor", status: "new", source: "site", createdAt: "2026-10-05T09:30:00.000Z" },
+    { id: "QP-000002", productId: "p", variantId: "v", productName: "G‘ilof shaffof", variantLabel: "—", price: 100_000, customerName: "Vali G‘aniyev", phone: "+998935550011", status: "done", source: "site", createdAt: "2026-10-04T18:00:00.000Z", adminNote: "pulini to‘ladi" },
+    { id: "QP-000001", productId: "p", variantId: "v", productName: "Redmi Note 13", variantLabel: "128GB", price: 3_000_000, customerName: "Olim", phone: "+998977770000", status: "cancelled", source: "site", createdAt: "2026-09-30T05:00:00.000Z" },
+  ];
+
+  await check("buyurtmalar: tablar sanog‘i va filtri", () => {
+    assert.deepEqual(countOrderTabs(orderFixtures), { hammasi: 3, yangi: 1, boglanildi: 0, bajarildi: 1, bekor: 1 });
+    assert.deepEqual(filterOrders(orderFixtures, "bajarildi", "").map((o) => o.id), ["QP-000002"]);
+    assert.equal(parseOrderTab("<x>"), "hammasi");
+  });
+
+  await check("buyurtmalar: qidiruv (raqam, telefon qismi, ism o‘/g‘ farqisiz, admin izohi)", () => {
+    const ids = (q: string) => filterOrders(orderFixtures, "hammasi", q).map((o) => o.id);
+    assert.deepEqual(ids("QP-000002"), ["QP-000002"]);
+    assert.deepEqual(ids("90 123"), ["QP-000003"]);
+    assert.deepEqual(ids("+998 93 555"), ["QP-000002"]);
+    assert.deepEqual(ids("ganiyev"), ["QP-000002"]);
+    assert.deepEqual(ids("gilof"), ["QP-000002"]);
+    assert.deepEqual(ids("pulini"), ["QP-000002"]);
+    assert.deepEqual(ids("redmi"), ["QP-000001"]);
+    assert.deepEqual(ids("yoqbunaqa"), []);
+  });
+
+  await check("buyurtma vaqti: Toshkent bo‘yicha Bugun/Kecha/sana", () => {
+    const now = new Date("2026-10-05T10:00:00.000Z"); // Toshkent: 15:00
+    assert.equal(formatOrderTime("2026-10-05T09:30:00.000Z", now), "Bugun, 14:30");
+    assert.equal(formatOrderTime("2026-10-04T18:00:00.000Z", now), "Kecha, 23:00");
+    assert.equal(formatOrderTime("2026-10-04T19:30:00.000Z", now), "Bugun, 00:30", "UTC'da kecha, Toshkentda bugun");
+    assert.equal(formatOrderTime("2026-09-30T05:00:00.000Z", now), "30.09.2026, 10:00");
+    assert.equal(formatOrderTime("noto‘g‘ri"), "—");
+  });
+
+  await check("bog‘lanish havolalari", () => {
+    assert.equal(phoneCallHref("+998901234567"), "tel:+998901234567");
+    assert.equal(telegramChatHref("+998 90 123 45 67"), "https://t.me/+998901234567");
   });
 
   await check("kategoriya tanlovi: faqat barglar, to‘liq yo‘l bilan", () => {

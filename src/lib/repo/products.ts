@@ -40,11 +40,23 @@ export function withPhotos(product: Product): Product {
  * Bazadagi barcha mahsulotlar. Har sahifa ochilganda bazaga bormaslik uchun keshlanadi;
  * admin saqlaganda darhol, aks holda baribir soatiga bir marta yangilanadi.
  */
+/**
+ * Bir vaqtda kelgan so‘rovlar (masalan, build paytida o‘nlab sahifa) bazaga BITTA so‘rov
+ * yuboradi va natijani bo‘lishadi — Supabase'ga ortiqcha yuk tushmaydi, timeout bo‘lmaydi.
+ */
+let inFlight: Promise<Product[]> | null = null;
+
+function fetchDbProducts(): Promise<Product[]> {
+  inFlight ??= dbSelectAll<ProductRow>("products", "select=*&order=created_at.desc,id.asc")
+    .then((rows) => rows.map(rowToProduct))
+    .finally(() => {
+      inFlight = null;
+    });
+  return inFlight;
+}
+
 const loadDbProducts = unstable_cache(
-  async (): Promise<Product[]> => {
-    const rows = await dbSelectAll<ProductRow>("products", "select=*&order=created_at.desc,id.asc");
-    return rows.map(rowToProduct);
-  },
+  async (): Promise<Product[]> => fetchDbProducts(),
   ["products:all:v1"],
   { tags: [PRODUCTS_TAG], revalidate: 3600 },
 );

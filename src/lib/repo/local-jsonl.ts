@@ -35,3 +35,22 @@ export async function countJsonLines(fileName: string): Promise<number> {
     return 0;
   }
 }
+
+/** Fayldagi barcha yozuvlar (buzilgan qatorlar tashlab yuboriladi); fayl yo‘q bo‘lsa — bo‘sh ro‘yxat. */
+export async function readJsonLines<T>(fileName: string): Promise<T[]> {
+  try {
+    const content = await readFile(filePath(fileName), "utf8");
+    const items: T[] = [];
+    for (const line of content.split("\n")) {
+      if (!line.trim()) continue;
+      try {
+        items.push(JSON.parse(line) as T);
+      } catch {
+        // buzilgan qator — o‘tkazib yuboriladi
+      }
+    }
+    return items;
+  } catch {
+    return [];
+  }
+}

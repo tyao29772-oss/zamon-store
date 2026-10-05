@@ -14,7 +14,7 @@ interface NavItem {
 
 const ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard, ready: true },
-  { label: "Buyurtmalar", href: "/admin/buyurtmalar", icon: ShoppingBag, ready: false },
+  { label: "Buyurtmalar", href: "/admin/buyurtmalar", icon: ShoppingBag, ready: true },
   { label: "Mahsulotlar", href: "/admin/mahsulotlar", icon: Package, ready: true },
 ];
 
@@ -22,7 +22,8 @@ function isActive(pathname: string, href: string): boolean {
   return href === "/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AdminNav() {
+/** `badges`: menyu bandi yonidagi son (masalan, yangi buyurtmalar), href bo‘yicha. */
+export function AdminNav({ badges = {} }: { badges?: Record<string, number> }) {
   const pathname = usePathname();
 
   return (
@@ -52,6 +53,11 @@ export function AdminNav() {
           >
             <Icon className="size-4 shrink-0" aria-hidden="true" />
             {label}
+            {(badges[href] ?? 0) > 0 && (
+              <span className="ml-auto min-w-6 rounded-full bg-sale px-1.5 py-0.5 text-center text-[11px] font-bold tabular-nums text-white" aria-label={`${badges[href]} ta yangi`}>
+                {badges[href]! > 99 ? "99+" : badges[href]}
+              </span>
+            )}
           </Link>
         );
       })}

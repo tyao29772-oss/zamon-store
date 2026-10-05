@@ -1,6 +1,6 @@
 import "server-only";
-import { dbCount, dbInsert, isDbConfigured } from "@/lib/db/supabase";
-import { appendJsonLine, countJsonLines } from "@/lib/repo/local-jsonl";
+import { dbCount, dbInsert, dbSelectAll, dbUpdate, isDbConfigured } from "@/lib/db/supabase";
+import { appendJsonLine, countJsonLines, readJsonLines } from "@/lib/repo/local-jsonl";
 import type { Money, Order, OrderStatus } from "@/types";
 
 /**
@@ -25,6 +25,10 @@ interface OrderRow {
   status: OrderStatus;
   source: "site";
   created_at: string;
+  updated_at?: string;
+  /** 0004-migratsiyadan keyin mavjud. */
+  admin_note?: string | null;
+  stock_deducted?: boolean;
 }
 
 function fromRow(row: OrderRow): Order {
@@ -41,6 +45,9 @@ function fromRow(row: OrderRow): Order {
     status: row.status,
     source: row.source,
     createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    adminNote: row.admin_note ?? undefined,
+    stockDeducted: row.stock_deducted ?? false,
   };
 }
 
@@ -131,4 +138,55 @@ function buildOrder(id: string, input: CreateOrderInput): Order {
     source: "site",
     createdAt: new Date().toISOString(),
   };
+}
+
+/* ------------------------------------------------------------------ Admin: o‘qish va yangilash */
+
+const ID_PATTERN = /^QP-[A-Z0-9]{1,20}$/;
+
+/** Barcha buyurtmalar, eng yangisi birinchi. */
+export async function listOrders(): Promise<Order[]> {
+  if (isDbConfigured()) {
+    const rows = await dbSelectAll<OrderRow>(TABLE, "select=*&order=created_at.desc,seq.desc");
+    return rows.map(fromRow);
+  }
+  const local = await readJsonLines<Order>(FILE_NAME);
+  return local.reverse();
+}
+
+export async function getOrderById(id: string): Promise<Order | null> {
+  if (!ID_PATTERN.test(id)) return null;
+  if (isDbConfigured()) {
+    const rows = await dbSelectAll<OrderRow>(TABLE, `select=*&id=eq.${encodeURIComponent(id)}`);
+    return rows[0] ? fromRow(rows[0]) : null;
+  }
+  return (await readJsonLines<Order>(FILE_NAME)).find((o) => o.id === id) ?? null;
+}
+
+/** «Yangi» holatdagi buyurtmalar soni (menyudagi belgi uchun); xato bo‘lsa 0. */
+export async function countNewOrders(): Promise<number> {
+  try {
+    if (isDbConfigured()) return await dbCount(TABLE, "status=eq.new");
+    return (await readJsonLines<Order>(FILE_NAME)).filter((o) => o.status === "new").length;
+  } catch (error) {
+    console.error("[repo/orders] yangi buyurtmalar sonini olib bo‘lmadi:", error);
+    return 0;
+  }
+}
+
+export interface OrderPatch {
+  status?: OrderStatus;
+  adminNote?: string | null;
+  stockDeducted?: boolean;
+}
+
+/** Faqat bazada (lokal faylni o‘zgartirish qo‘llab-quvvatlanmaydi). Topilmasa — `null`. */
+export async function updateOrder(id: string, patch: OrderPatch): Promise<Order | null> {
+  if (!ID_PATTERN.test(id)) return null;
+  const body: Record<string, unknown> = {};
+  if (patch.status !== undefined) body.status = patch.status;
+  if (patch.adminNote !== undefined) body.admin_note = patch.adminNote;
+  if (patch.stockDeducted !== undefined) body.stock_deducted = patch.stockDeducted;
+  const rows = await dbUpdate<OrderRow>(TABLE, `id=eq.${encodeURIComponent(id)}`, body);
+  return rows[0] ? fromRow(rows[0]) : null;
 }

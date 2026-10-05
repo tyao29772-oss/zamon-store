@@ -45,7 +45,7 @@ Brauzerda [http://localhost:3000](http://localhost:3000) ni oching.
 ### Supabase bazasini ulash
 
 1. [supabase.com](https://supabase.com) da loyiha oching.
-2. **SQL Editor → New query** da `supabase/migrations/` dagi fayllarni tartib bilan (`0001_…`, `0002_…`, `0003_…`) to‘liq joylashtirib, **Run** bosing. `0003` — admin paneldan yuklanadigan mahsulot rasmlari uchun Storage papkasi.
+2. **SQL Editor → New query** da `supabase/migrations/` dagi fayllarni tartib bilan (`0001_…` … `0004_…`) to‘liq joylashtirib, **Run** bosing. `0003` — admin paneldan yuklanadigan mahsulot rasmlari uchun Storage papkasi.
 3. `SUPABASE_URL` va `SUPABASE_SECRET_KEY` ni `.env.local` ga (va Netlify Environment variables'ga) qo‘ying.
 4. `npm run db:check` — manzil, kalit va jadvallarni tekshiradi.
 5. `npm run db:seed-products` — `src/data/products` dagi mahsulotlarni bazaga ko‘chiradi (faqat yo‘qlarini qo‘shadi, admin tahrirlariga tegmaydi). Shundan keyin sayt mahsulotlarni bazadan o‘qiydi, ularni admin paneldan boshqarasiz.

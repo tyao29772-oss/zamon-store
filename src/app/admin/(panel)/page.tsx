@@ -5,7 +5,7 @@ import { CircleAlert, CircleCheck, CircleDashed, type LucideIcon } from "lucide-
 import { getServerEnv } from "@/config/env";
 import { checkImageBucket } from "@/lib/db/storage";
 import { checkDbHealth } from "@/lib/db/supabase";
-import { countOrders } from "@/lib/repo/orders";
+import { countNewOrders, countOrders } from "@/lib/repo/orders";
 import { countByStatus, toAdminRow } from "@/lib/admin/product-list";
 import { formatNumber } from "@/lib/format";
 import { getAllProductsForAdmin } from "@/lib/repo/products";
@@ -41,9 +41,10 @@ function StatCard({ label, value, href, tone }: { label: string; value: string; 
 export default async function AdminDashboardPage() {
   // Har doim so‘rov vaqtida yangi ma’lumot: build paytida bazaga murojaat qilinmaydi.
   await connection();
-  const [products, orderCount, db, imageBucket] = await Promise.all([
+  const [products, orderCount, newOrders, db, imageBucket] = await Promise.all([
     getAllProductsForAdmin(),
     countOrders(),
+    countNewOrders(),
     checkDbHealth(),
     checkImageBucket(),
   ]);
@@ -90,7 +91,12 @@ export default async function AdminDashboardPage() {
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Saytdagi mahsulotlar" value={formatNumber(productCounts.saytda)} href="/admin/mahsulotlar?holat=saytda" />
-        <StatCard label="Jami buyurtmalar" value={orderCount === null ? "—" : formatNumber(orderCount)} />
+        <StatCard
+          label={orderCount === null ? "Yangi buyurtmalar" : `Yangi buyurtmalar (jami ${formatNumber(orderCount)})`}
+          value={formatNumber(newOrders)}
+          href="/admin/buyurtmalar?holat=yangi"
+          tone={newOrders > 0 ? "sale" : undefined}
+        />
         <StatCard label="Kam qolgan" value={formatNumber(productCounts.kam)} href="/admin/mahsulotlar?holat=kam" tone={productCounts.kam > 0 ? "warn" : undefined} />
         <StatCard label="Tugagan" value={formatNumber(productCounts.tugagan)} href="/admin/mahsulotlar?holat=tugagan" tone={productCounts.tugagan > 0 ? "sale" : undefined} />
       </div>
