@@ -18,18 +18,12 @@ import { formatCount } from "@/lib/format";
 import { buildBreadcrumbJsonLd, toJsonLd } from "@/lib/seo";
 import { getBrands } from "@/lib/repo/brands";
 import {
-  getCategories,
   getCategoryByPath,
   getCategoryChain,
   getChildCategories,
   getRootCategoryId,
 } from "@/lib/repo/categories";
 import { getProductsByCategory } from "@/lib/repo/products";
-
-export async function generateStaticParams() {
-  const categories = await getCategories();
-  return categories.map((category) => ({ slug: category.path.split("/") }));
-}
 
 export async function generateMetadata({
   params,

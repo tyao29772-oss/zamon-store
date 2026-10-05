@@ -28,11 +28,6 @@ import { getProductsByBrand } from "@/lib/repo/products";
 
 const FIELDS: FilterField[] = [{ key: "holat", label: "Holati", source: "variant.condition" }];
 
-export async function generateStaticParams() {
-  const brands = await getBrands();
-  return brands.map((brand) => ({ slug: brand.slug }));
-}
-
 export async function generateMetadata({
   params,
 }: PageProps<"/brendlar/[slug]">): Promise<Metadata> {

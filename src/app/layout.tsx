@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
+import { connection } from "next/server";
 import { publicEnv } from "@/config/env";
 import { siteConfig } from "@/config/site";
 import { getStore } from "@/lib/repo/store";
@@ -51,7 +52,11 @@ export const viewport: Viewport = {
  * Ildiz layout faqat `<html>`, shriftlar va provayderlarni beradi. Do‘kon ramkasi
  * (header/footer) `(store)/layout.tsx` da, admin panelniki — `admin/` ichida.
  */
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Har sahifa so‘rov paytida tayyorlanadi: xavfsizlik siyosati (CSP) har so‘rovga yangi `nonce`
+  // beradi va Next.js uni skriptlarga qo‘yadi. Oldindan tayyorlangan (statik) sahifada nonce bo‘lmaydi.
+  // Ma’lumotlar baribir keshlanadi (unstable_cache), shuning uchun sahifa tez qoladi.
+  await connection();
   return (
     <html lang={siteConfig.language} className={`${inter.variable} ${cormorant.variable}`}>
       <body className="min-h-dvh">

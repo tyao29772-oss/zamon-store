@@ -9,18 +9,12 @@ import { buildBreadcrumbJsonLd, buildProductJsonLd, toJsonLd } from "@/lib/seo";
 import { getBrandById, getBrands } from "@/lib/repo/brands";
 import { getCategoryById, getCategoryChain } from "@/lib/repo/categories";
 import {
-  getAllProducts,
   getBundleProducts,
   getProductBySlug,
   getRelatedProducts,
 } from "@/lib/repo/products";
 import { getStore } from "@/lib/repo/store";
 import { productHref } from "@/lib/urls";
-
-export async function generateStaticParams() {
-  const products = await getAllProducts();
-  return products.map((product) => ({ slug: product.slug }));
-}
 
 export async function generateMetadata({
   params,

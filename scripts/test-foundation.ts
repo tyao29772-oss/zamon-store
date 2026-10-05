@@ -112,6 +112,7 @@ import { store } from "@/data/store";
 import { mergeStoreSettings, paragraphsToText, pickStoreSettings, storeSettingsSchema, textToParagraphs } from "@/lib/settings/store-settings";
 import { buildBackup, formatExportTime, ordersSheet, productsSheet, validateBackup } from "@/lib/admin/export";
 import { buildXlsx, columnName, crc32 } from "@/lib/admin/xlsx";
+import { buildContentSecurityPolicy, cspOrigin } from "@/lib/security/csp";
 import { fillDays, getStatsRange, parsePeriod, percentChange, ratePercent, zonedDay, zonedMidnight } from "@/lib/admin/stats";
 import { DEFAULT_HOME, homeSettingsSchema, isSafeHref, mergeHomeSettings } from "@/lib/settings/home-settings";
 import type { Order, Product, ProductVariant } from "@/types";
@@ -1463,6 +1464,20 @@ async function main(): Promise<void> {
     assert.equal(options.length, 25);
     assert.ok(options.some((o) => o.label === "Zaryadchiklar › Adapterlar" && o.rootName === "Aksessuarlar"));
     assert.ok(!options.some((o) => o.id === "telefonlar"));
+  });
+
+  await check("xavfsizlik: CSP qattiq, begona manba yo‘q", () => {
+    const csp = buildContentSecurityPolicy({ nonce: "abc", supabaseUrl: "https://x.supabase.co/", dev: false, https: true, frameAncestors: "'self'" });
+    const directive = (name: string) => csp.split("; ").find((d) => d.startsWith(`${name} `)) ?? "";
+    assert.equal(directive("script-src"), "script-src 'self' 'nonce-abc' 'strict-dynamic'");
+    assert.ok(!directive("script-src").includes("unsafe"), "skriptlarda unsafe yo‘q");
+    assert.equal(directive("object-src"), "object-src 'none'");
+    assert.equal(directive("base-uri"), "base-uri 'self'");
+    assert.ok(directive("img-src").endsWith("https://x.supabase.co"));
+    assert.ok(csp.includes("upgrade-insecure-requests"));
+    assert.ok(buildContentSecurityPolicy({ nonce: "n", dev: true, https: false, frameAncestors: "'none'" }).includes("frame-ancestors 'none'"));
+    // Noto‘g‘ri/xavfli Supabase manzili CSP’ga tushmaydi
+    for (const bad of ["http://x.supabase.co", "https://x.co; script-src *", "javascript:alert(1)", "", undefined]) assert.equal(cspOrigin(bad), null, String(bad));
   });
 
   await check("excel: zip va crc to‘g‘ri, matn formula bo‘lmaydi", async () => {

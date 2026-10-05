@@ -19,7 +19,9 @@ function cleanUrl(value: string | undefined): string {
 export const publicEnv = {
   // NEXT_PUBLIC_ qiymatlar Next.js tomonidan build vaqtida to‘g‘ridan-to‘g‘ri
   // `process.env.NEXT_PUBLIC_X` ko‘rinishida almashtiriladi — dinamik o‘qib bo‘lmaydi.
-  siteUrl: cleanUrl(process.env.NEXT_PUBLIC_SITE_URL) || DEFAULT_SITE_URL,
+  // next.config doim to‘ldiradi; zaxira qiymat faqat Next’siz (skript/test) ishlaganda. Shart shunday
+  // yozilganki, build paytida qiymat ma’lum bo‘lsa, «localhost» brauzer kodiga umuman tushmaydi.
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL ? cleanUrl(process.env.NEXT_PUBLIC_SITE_URL) : DEFAULT_SITE_URL,
   telegramUsername:
     cleanUsername(process.env.NEXT_PUBLIC_TELEGRAM_USERNAME) ||
     DEFAULT_TELEGRAM_USERNAME,
