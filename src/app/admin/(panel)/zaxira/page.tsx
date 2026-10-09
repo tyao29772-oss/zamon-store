@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { DatabaseBackup, FileSpreadsheet, ShieldCheck, type LucideIcon } from "lucide-react";
+import { DatabaseBackup, FileSpreadsheet, PackageX, ShieldCheck, type LucideIcon } from "lucide-react";
+import { DemoCleanup } from "@/components/admin/DemoCleanup";
 import { requireAdmin } from "@/lib/admin/auth";
+import { isDemoProductId } from "@/lib/admin/demo-data";
 import { isDbConfigured } from "@/lib/db/supabase";
 import { formatNumber } from "@/lib/format";
 import { countOrders } from "@/lib/repo/orders";
@@ -38,6 +40,7 @@ export default async function AdminBackupPage() {
   const [products, orderCount] = await Promise.all([getAllProductsForAdmin(), countOrders()]);
   const variantCount = products.reduce((sum, p) => sum + p.variants.length, 0);
   const db = isDbConfigured();
+  const demoCount = products.filter((p) => isDemoProductId(p.id)).length;
 
   return (
     <div className="max-w-5xl">
@@ -82,6 +85,15 @@ export default async function AdminBackupPage() {
           disabled={!db}
         />
       </div>
+
+      {db && (
+        <section className="mt-6 rounded-[var(--radius-card)] border border-sale/25 bg-surface p-5">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
+            <PackageX className="size-5 text-sale" aria-hidden="true" /> Namunaviy mahsulotlar
+          </h2>
+          <DemoCleanup demoCount={demoCount} ownCount={products.length - demoCount} canEdit={db} />
+        </section>
+      )}
 
       <section className="mt-6 rounded-[var(--radius-card)] border border-line bg-surface p-5 text-sm text-ink-muted">
         <h2 className="flex items-center gap-2 text-base font-semibold text-ink">

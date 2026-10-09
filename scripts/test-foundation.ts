@@ -113,6 +113,7 @@ import { mergeStoreSettings, paragraphsToText, pickStoreSettings, storeSettingsS
 import { buildBackup, formatExportTime, ordersSheet, productsSheet, validateBackup } from "@/lib/admin/export";
 import { buildXlsx, columnName, crc32 } from "@/lib/admin/xlsx";
 import { buildContentSecurityPolicy, cspOrigin } from "@/lib/security/csp";
+import { isDemoConfirmed } from "@/lib/admin/demo-confirm";
 import { fillDays, getStatsRange, parsePeriod, percentChange, ratePercent, zonedDay, zonedMidnight } from "@/lib/admin/stats";
 import { DEFAULT_HOME, homeSettingsSchema, isSafeHref, mergeHomeSettings } from "@/lib/settings/home-settings";
 import type { Order, Product, ProductVariant } from "@/types";
@@ -1464,6 +1465,14 @@ async function main(): Promise<void> {
     assert.equal(options.length, 25);
     assert.ok(options.some((o) => o.label === "Zaryadchiklar › Adapterlar" && o.rootName === "Aksessuarlar"));
     assert.ok(!options.some((o) => o.id === "telefonlar"));
+  });
+
+  await check("topshirish: setup.sql eskirmagan, namunaviy mahsulot tasdig‘i", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { buildSetupSql } = (await import("./build-setup-sql.mjs")) as { buildSetupSql: () => string };
+    assert.equal(readFileSync("supabase/setup.sql", "utf8").replace(/\r\n/g, "\n"), buildSetupSql(), "setup.sql eskirgan — npm run db:setup-sql");
+    for (const ok of ["O‘CHIRISH", "o'chirish", " Oʻchirish ", "O’CHIRISH"]) assert.ok(isDemoConfirmed(ok), ok);
+    for (const bad of ["", "ochirish", "O‘CHIR", "DELETE"]) assert.ok(!isDemoConfirmed(bad), bad);
   });
 
   await check("xavfsizlik: CSP qattiq, begona manba yo‘q", () => {

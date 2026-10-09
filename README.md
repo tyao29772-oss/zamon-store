@@ -5,17 +5,25 @@ Toshkentdagi telefon, noutbuk va aksessuar do‘koni uchun zamonaviy, mobilga mo
 
 To‘liq mahsulot spetsifikatsiyasi: [`docs/PROJECT_PROMPT.md`](docs/PROJECT_PROMPT.md).
 
-> ⚠️ **Namunaviy ma’lumot**: barcha mahsulot, narx, do‘kon manzili/telefon/ish vaqti hozircha
-> **o‘ylab topilgan namuna** — real emas. Haqiqiy do‘kon ma’lumotlari kelganda faqat
-> `src/data/` papkasidagi fayllar almashtiriladi (pastga qarang).
+## Hujjatlar
+
+| Kim uchun | Hujjat |
+|---|---|
+| Yangi do‘kon uchun saytni o‘rnatadigan odam | [docs/ORNATISH.md](docs/ORNATISH.md) — Supabase, Netlify, Telegram bot, domen, tekshiruv ro‘yxati |
+| Do‘kon egasi | [docs/ADMIN-QOLLANMA.md](docs/ADMIN-QOLLANMA.md) — admin panelning har bir bo‘limi, kundalik ish, xavfsizlik |
+
+> ⚠️ **Namunaviy ma’lumot**: `src/data/` dagi mahsulot, narx, do‘kon manzili va telefon —
+> **o‘ylab topilgan namuna**. Haqiqiy do‘konda hammasi admin paneldan kiritiladi: Sozlamalar,
+> Mahsulotlar va boshqa bo‘limlar. Namuna mahsulotlar «Zaxira» bo‘limidan bitta tugma bilan o‘chiriladi.
 
 ## Texnologiyalar
 
 Next.js 16 (App Router, Turbopack) · React 19 · TypeScript (strict) · Tailwind CSS v4 ·
-MiniSearch (qidiruv) · Zod (validatsiya) · lucide-react.
+Supabase (Postgres + Storage, REST orqali) · MiniSearch (qidiruv) · Zod (validatsiya) · lucide-react.
 
-Backend yo‘q — ma’lumotlar `src/data/*.ts` fayllarida (in-memory), buyurtma/eventlar esa
-`.data/*.jsonl` fayllarga lokal yoziladi (2-faza'da haqiqiy DB bilan almashtiriladi).
+Ma’lumotlar Supabase'da saqlanadi: mahsulotlar, buyurtmalar, statistika, sozlamalar va rasmlar.
+Supabase ulanmagan bo‘lsa, faqat lokal ishlab chiqish uchun `src/data/*.ts` va `.data/*.jsonl`
+fayllari ishlatiladi.
 
 ## Ishga tushirish
 
@@ -45,7 +53,7 @@ Brauzerda [http://localhost:3000](http://localhost:3000) ni oching.
 ### Supabase bazasini ulash
 
 1. [supabase.com](https://supabase.com) da loyiha oching.
-2. **SQL Editor → New query** da `supabase/migrations/` dagi fayllarni tartib bilan (`0001_…` … `0008_…`) to‘liq joylashtirib, **Run** bosing. `0003` — admin paneldan yuklanadigan mahsulot rasmlari uchun Storage papkasi, `0006` — brendlar va kategoriyalar, `0007` — bosh sahifa sozlamalari, `0008` — statistika.
+2. **SQL Editor → New query** da `supabase/setup.sql` ni to‘liq joylashtirib, **Run** bosing. Unda barcha migratsiyalar bitta faylda. Yoki `supabase/migrations/` dagi fayllarni tartib bilan (`0001_…` … `0008_…`) ishga tushiring. `0003` — admin paneldan yuklanadigan mahsulot rasmlari uchun Storage papkasi, `0006` — brendlar va kategoriyalar, `0007` — bosh sahifa sozlamalari, `0008` — statistika.
 3. `SUPABASE_URL` va `SUPABASE_SECRET_KEY` ni `.env.local` ga (va Netlify Environment variables'ga) qo‘ying.
 4. `npm run db:check` — manzil, kalit va jadvallarni tekshiradi.
 5. `npm run db:seed-products` — `src/data/products` dagi mahsulotlarni bazaga ko‘chiradi (faqat yo‘qlarini qo‘shadi, admin tahrirlariga tegmaydi). Shundan keyin sayt mahsulotlarni bazadan o‘qiydi, ularni admin paneldan boshqarasiz. Brend va kategoriyalar admin paneldagi birinchi o‘zgarishda o‘zi bazaga ko‘chadi (qo‘lda: `npm run db:seed-taxonomy`).
@@ -73,6 +81,8 @@ Hech biri sirli qilib `NEXT_PUBLIC_` bilan boshlanmaydi — token/chat ID faqat 
 | `npm run db:check` | Supabase ulanishi, kalit va jadvallarni tekshiradi (kalitni ekranga chiqarmaydi) |
 | `npm run db:seed-products` | Kod fayllaridagi mahsulotlarni bazaga ko‘chiradi (mavjudlariga tegmaydi; `-- --force` — ustidan yozadi) |
 | `npm run db:seed-taxonomy` | Standart brend va kategoriyalarni bazaga ko‘chiradi (mavjudlariga tegmaydi) |
+| `npm run db:setup-sql` | Barcha migratsiyalarni bitta `supabase/setup.sql` ga yig‘adi. Yangi migratsiya qo‘shilganda ishga tushiring |
+| `npm run secrets` | Yangi do‘kon uchun kuchli `ADMIN_PASSWORD` va `ADMIN_SESSION_SECRET` yaratadi |
 | `npm run db:restore -- fayl.json` | Admin paneldagi «Zaxira» faylidan bazani tiklaydi: avval farqni ko‘rsatadi, `--yes` bilan yozadi (`--with-orders` — buyurtmalarni bo‘sh jadvalga) |
 | `npm run images` | `public/products/` dagi rasmlarni mahsulotlarga bog‘laydi + hisobot |
 

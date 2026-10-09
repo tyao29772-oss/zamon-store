@@ -32,6 +32,18 @@ export async function deleteProduct(id: string): Promise<void> {
   if (rows.length === 0) throw new ProductNotFoundError(id);
 }
 
+/** Bir nechta mahsulotni o‘chiradi (so‘rov manzili uzun bo‘lmasligi uchun bo‘lib-bo‘lib). O‘chirilganlarini qaytaradi. */
+export async function deleteProductsByIds(ids: string[]): Promise<Product[]> {
+  const safe = ids.filter((id) => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(id));
+  const deleted: Product[] = [];
+  for (let i = 0; i < safe.length; i += 40) {
+    const chunk = safe.slice(i, i + 40);
+    const rows = await dbDelete<ProductRow>(TABLE, `id=in.(${chunk.join(",")})`);
+    deleted.push(...rows.map(rowToProduct));
+  }
+  return deleted;
+}
+
 export async function insertProduct(product: Product): Promise<Product> {
   try {
     const row = await dbInsert<ProductRow>(TABLE, productToRow(product) as unknown as Record<string, unknown>);

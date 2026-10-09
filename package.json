@@ -19,6 +19,8 @@
     "db:check": "node scripts/db-check.mjs",
     "telegram:setup": "node scripts/telegram-setup.mjs",
     "db:seed-taxonomy": "tsx --require ./scripts/lib/stub-server-only.cjs scripts/db-seed-taxonomy.ts",
+    "db:setup-sql": "node scripts/build-setup-sql.mjs",
+    "secrets": "node scripts/secrets.mjs",
     "db:restore": "tsx --require ./scripts/lib/stub-server-only.cjs scripts/db-restore.ts",
     "db:seed-products": "tsx --require ./scripts/lib/stub-server-only.cjs scripts/db-seed-products.ts"
   },

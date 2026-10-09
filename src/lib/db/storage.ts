@@ -79,6 +79,35 @@ export async function createSignedImageUpload(contentType: ImageContentType): Pr
   };
 }
 
+/**
+ * Admin yuklagan rasmlarni Storage’dan o‘chiradi (faqat shu do‘kon papkasidagi o‘z fayllarimiz).
+ * O‘chirilgan fayllar sonini qaytaradi; xato saytni to‘xtatmaydi.
+ */
+export async function deleteUploadedImages(urls: string[]): Promise<number> {
+  const env = getSupabaseEnv();
+  const prefix = getPublicImagePrefix();
+  const paths = [...new Set(urls.filter(isOwnUploadedImage).map((url) => url.slice(prefix!.length)))];
+  if (!env || paths.length === 0) return 0;
+  try {
+    const response = await fetch(`${env.url}/storage/v1/object/${PRODUCT_IMAGES_BUCKET}`, {
+      method: "DELETE",
+      headers: { ...authHeaders(env.secretKey), "Content-Type": "application/json" },
+      body: JSON.stringify({ prefixes: paths }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!response.ok) {
+      console.error(`[storage] rasmlarni o‘chirib bo‘lmadi: ${response.status}`);
+      return 0;
+    }
+    return ((await response.json()) as unknown[]).length;
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[storage] rasmlarni o‘chirib bo‘lmadi:", error);
+    return 0;
+  }
+}
+
 /** `db:check` va dashboard uchun: rasmlar papkasi yaratilganmi. */
 export async function checkImageBucket(): Promise<boolean> {
   const env = getSupabaseEnv();

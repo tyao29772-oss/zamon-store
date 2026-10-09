@@ -65,6 +65,10 @@ const resourceCsp = { key: "Content-Security-Policy", value: "default-src 'none'
 const nextConfig: NextConfig = {
   env: siteUrl ? { NEXT_PUBLIC_SITE_URL: siteUrl } : {},
   poweredByHeader: false,
+  // Ba’zi brauzer va botlar `/favicon.ico` ni o‘zi so‘raydi — do‘kon belgisini (`app/icon.tsx`) beramiz.
+  async rewrites() {
+    return [{ source: "/favicon.ico", destination: "/icon" }];
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
